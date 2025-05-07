@@ -1,0 +1,7 @@
+{
+  "name": "pizzaApp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
