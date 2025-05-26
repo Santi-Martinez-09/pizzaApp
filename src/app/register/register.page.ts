@@ -75,6 +75,7 @@ export class RegisterPage implements OnInit {
   }
 
   ngOnInit() {
+    
   }
 
   async register() {

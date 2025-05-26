@@ -1,3 +1,71 @@
 <ion-app>
-  <ion-router-outlet></ion-router-outlet>
+  <ion-split-pane contentId="main-content" *ngIf="isLoggedIn()">
+    
+    <!-- Menú lateral -->
+    <ion-menu contentId="main-content" type="overlay">
+      <ion-header>
+        <ion-toolbar color="primary">
+          <ion-title>🍕 PizzApp</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content>
+        <!-- Información del usuario -->
+        <ion-list class="user-info">
+          <ion-item>
+            <ion-icon name="person-circle" slot="start" size="large"></ion-icon>
+            <ion-label>
+              <h2>{{ getUserDisplayName() }}</h2>
+              <p>{{ authService.getUserProfile()?.role === 'admin' ? 'Administrador' : 'Cliente' }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <!-- Páginas principales -->
+        <ion-list>
+          <ion-list-header>
+            <ion-label>Menú Principal</ion-label>
+          </ion-list-header>
+          
+          <ion-menu-toggle auto-hide="false" *ngFor="let p of appPages">
+            <ion-item routerDirection="root" [routerLink]="[p.url]" lines="none" detail="false" routerLinkActive="selected">
+              <ion-icon aria-hidden="true" slot="start" [name]="p.icon + '-outline'"></ion-icon>
+              <ion-label>{{ p.title }}</ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+        </ion-list>
+
+        <!-- Páginas de administrador -->
+        <ion-list *ngIf="isAdmin()">
+          <ion-list-header>
+            <ion-label>Administración</ion-label>
+          </ion-list-header>
+          
+          <ion-menu-toggle auto-hide="false" *ngFor="let p of adminPages">
+            <ion-item routerDirection="root" [routerLink]="[p.url]" lines="none" detail="false" routerLinkActive="selected">
+              <ion-icon aria-hidden="true" slot="start" [name]="p.icon + '-outline'"></ion-icon>
+              <ion-label>{{ p.title }}</ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+        </ion-list>
+
+        <!-- Cerrar sesión -->
+        <ion-list class="logout-section">
+          <ion-menu-toggle auto-hide="false">
+            <ion-item button (click)="logout()" lines="none" detail="false">
+              <ion-icon aria-hidden="true" slot="start" name="log-out-outline"></ion-icon>
+              <ion-label>Cerrar Sesión</ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+        </ion-list>
+      </ion-content>
+    </ion-menu>
+
+    <!-- Contenido principal -->
+    <ion-router-outlet id="main-content"></ion-router-outlet>
+
+  </ion-split-pane>
+
+  <!-- Si no está logueado, mostrar solo el router outlet -->
+  <ion-router-outlet *ngIf="!isLoggedIn()"></ion-router-outlet>
 </ion-app>

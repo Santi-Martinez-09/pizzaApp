@@ -1,0 +1,191 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Mis Pedidos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <!-- Refresher -->
+  <ion-refresher slot="fixed" (ionRefresh)="loadPedidos($event)">
+    <ion-refresher-content
+      pullingIcon="refresh-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Header -->
+  <div class="header-section">
+    <h1>📦 Historial de Pedidos</h1>
+    <p>Revisa el estado de tus pedidos</p>
+  </div>
+
+  <!-- Lista de pedidos vacía -->
+  <div *ngIf="pedidos.length === 0 && !isLoading" class="empty-orders">
+    <ion-icon name="receipt-outline" class="empty-icon"></ion-icon>
+    <h2>No tienes pedidos</h2>
+    <p>¡Haz tu primer pedido y aparecerá aquí!</p>
+    <ion-button (click)="goToHome()" expand="block" fill="solid" class="order-now-btn">
+      <ion-icon name="add-outline" slot="start"></ion-icon>
+      Hacer mi primer pedido
+    </ion-button>
+  </div>
+
+  <!-- Lista de pedidos -->
+  <div *ngIf="pedidos.length > 0" class="orders-list">
+    <ion-card *ngFor="let pedido of pedidos" class="order-card" [class]="'status-' + pedido.estado">
+      
+      <!-- Header del pedido -->
+      <ion-card-header>
+        <div class="order-header">
+          <div class="order-info">
+            <ion-card-title>
+              Pedido #{{ (pedido.id?.substring(0, 8) || 'TEMP').toUpperCase() }}
+            </ion-card-title>
+            <ion-note>{{ formatDate(pedido.fechaCreacion) }}</ion-note>
+          </div>
+          
+          <ion-badge 
+            [color]="getEstadoBadgeColor(pedido.estado)" 
+            class="status-badge">
+            <ion-icon [name]="getEstadoIcon(pedido.estado)"></ion-icon>
+            {{ getEstadoText(pedido.estado) }}
+          </ion-badge>
+        </div>
+      </ion-card-header>
+
+      <!-- Contenido del pedido -->
+      <ion-card-content>
+        <!-- Items del pedido -->
+        <div class="order-items">
+          <h4>Items pedidos:</h4>
+          <div class="items-summary">
+            <div *ngFor="let item of pedido.items.slice(0, 3); let i = index" class="item-row">
+              <span class="item-name">{{ item.item.nombre }}</span>
+              <span class="item-quantity">x{{ item.cantidad }}</span>
+              <span class="item-price">{{ formatPrice(item.precio * item.cantidad) }}</span>
+            </div>
+            <div *ngIf="pedido.items.length > 3" class="more-items">
+              <span>+ {{ pedido.items.length - 3 }} items más</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información de entrega -->
+        <div class="delivery-info">
+          <div class="info-row">
+            <ion-icon name="location-outline"></ion-icon>
+            <span>{{ pedido.direccion }}</span>
+          </div>
+          <div class="info-row">
+            <ion-icon name="call-outline"></ion-icon>
+            <span>{{ pedido.telefono }}</span>
+          </div>
+          <div class="info-row">
+            <ion-icon name="card-outline"></ion-icon>
+            <span>{{ getPaymentMethodName(pedido.metodoPago) }}</span>
+          </div>
+        </div>
+
+        <!-- Progreso del pedido -->
+        <div class="order-progress" *ngIf="pedido.estado !== 'cancelado'">
+          <div class="progress-steps">
+            <div class="step" [class.completed]="true" [class.active]="pedido.estado === 'pendiente'">
+              <div class="step-icon">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+              </div>
+              <span>Recibido</span>
+            </div>
+            
+            <div class="step-line" [class.completed]="pedido.estado === 'preparando' || pedido.estado === 'enviado' || pedido.estado === 'entregado'"></div>
+            
+            <div class="step" 
+                 [class.completed]="pedido.estado === 'preparando' || pedido.estado === 'enviado' || pedido.estado === 'entregado'"
+                 [class.active]="pedido.estado === 'preparando'">
+              <div class="step-icon">
+                <ion-icon name="restaurant-outline"></ion-icon>
+              </div>
+              <span>Preparando</span>
+            </div>
+            
+            <div class="step-line" [class.completed]="pedido.estado === 'enviado' || pedido.estado === 'entregado'"></div>
+            
+            <div class="step" 
+                 [class.completed]="pedido.estado === 'enviado' || pedido.estado === 'entregado'"
+                 [class.active]="pedido.estado === 'enviado'">
+              <div class="step-icon">
+                <ion-icon name="car-outline"></ion-icon>
+              </div>
+              <span>En camino</span>
+            </div>
+            
+            <div class="step-line" [class.completed]="pedido.estado === 'entregado'"></div>
+            
+            <div class="step" 
+                 [class.completed]="pedido.estado === 'entregado'"
+                 [class.active]="pedido.estado === 'entregado'">
+              <div class="step-icon">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+              </div>
+              <span>Entregado</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tiempo estimado -->
+        <div class="estimated-time" *ngIf="pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>{{ getEstimatedTime(pedido) }}</span>
+        </div>
+
+        <!-- Total -->
+        <div class="order-total">
+          <span class="total-label">Total pagado:</span>
+          <span class="total-amount">{{ formatPrice(pedido.total) }}</span>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="action-buttons">
+          <ion-button 
+            fill="outline" 
+            size="small"
+            (click)="verDetallesPedido(pedido)">
+            <ion-icon name="eye-outline" slot="start"></ion-icon>
+            Ver detalles
+          </ion-button>
+          
+          <ion-button 
+            fill="outline" 
+            size="small"
+            (click)="rastrearPedido(pedido)"
+            *ngIf="pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'">
+            <ion-icon name="map-outline" slot="start"></ion-icon>
+            Rastrear
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            size="small"
+            color="danger"
+            (click)="cancelarPedido(pedido)"
+            *ngIf="pedido.estado === 'pendiente'">
+            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+            Cancelar
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Botón para hacer nuevo pedido -->
+  <div class="fab-container" *ngIf="pedidos.length > 0">
+    <ion-button (click)="goToHome()" class="new-order-fab" expand="block">
+      <ion-icon name="add-outline" slot="start"></ion-icon>
+      Hacer nuevo pedido
+    </ion-button>
+  </div>
+</ion-content>

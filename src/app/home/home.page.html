@@ -1,23 +1,153 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
+  <ion-toolbar color="primary">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>
-      Inicio
-    </ion-title>
+    <ion-title>🍕 Pizza App</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Inicio</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-  <div id="container">
-    <strong>¡Listo para crear una app!</strong>
-    <p>Empieza con <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">Ionic UI Components</a></p>
+  <!-- Header promocional -->
+  <div class="promo-header">
+    <h1>¡Las mejores pizzas de la ciudad!</h1>
+    <p>Entrega rápida y ingredientes frescos</p>
   </div>
+
+  <!-- Selector de categorías -->
+  <div class="category-selector">
+    <ion-segment [(ngModel)]="categoriaSeleccionada" color="primary">
+      <ion-segment-button value="pizzas">
+        <ion-label>🍕 Pizzas</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="bebidas">
+        <ion-label>🥤 Bebidas</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Sección de Pizzas -->
+  <div *ngIf="categoriaSeleccionada === 'pizzas'" class="products-section">
+    <h2 class="section-title">Nuestras Pizzas</h2>
+    
+    <ion-grid>
+      <ion-row>
+        <ion-col 
+          size="12" 
+          size-md="6" 
+          size-lg="4" 
+          *ngFor="let pizza of pizzas"
+        >
+          <ion-card 
+            class="pizza-card" 
+            [class.unavailable]="!pizza.disponible"
+          >
+            <div class="card-image-container">
+              <img 
+                [src]="pizza.imagen || 'assets/images/pizza-default.jpg'" 
+                [alt]="pizza.nombre"
+                class="pizza-image"
+              />
+              <div class="pizza-category-badge">
+                {{ pizza.categoria }}
+              </div>
+            </div>
+            
+            <ion-card-header>
+              <ion-card-title>{{ pizza.nombre }}</ion-card-title>
+              
+              <ion-chip outline="true" color="medium">
+                <ion-icon name="pizza-outline"></ion-icon>
+                <ion-label>{{ pizza.tamano | titlecase }}</ion-label>
+              </ion-chip>
+            </ion-card-header>
+            
+            <ion-card-content>
+              <p class="pizza-description">{{ pizza.descripcion }}</p>
+              
+              <!-- Ingredientes -->
+              <div class="ingredients">
+                <ion-chip 
+                  *ngFor="let ingrediente of pizza.ingredientes" 
+                  color="light" 
+                  outline="true"
+                >
+                  {{ ingrediente }}
+                </ion-chip>
+              </div>
+              
+              <div class="pizza-footer">
+                <span class="price">{{ formatPrice(pizza.precio) }}</span>
+                <ion-button 
+                  (click)="agregarPizzaAlCarrito(pizza)"
+                  [disabled]="!pizza.disponible"
+                  size="small"
+                  color="primary"
+                >
+                  <ion-icon name="add-outline" slot="start"></ion-icon>
+                  {{ pizza.disponible ? 'Agregar' : 'No disponible' }}
+                </ion-button>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+
+  <!-- Sección de Bebidas -->
+  <div *ngIf="categoriaSeleccionada === 'bebidas'" class="products-section">
+    <h2 class="section-title">Bebidas</h2>
+    
+    <ion-grid>
+      <ion-row>
+        <ion-col 
+          size="12" 
+          size-md="6" 
+          size-lg="3" 
+          *ngFor="let bebida of bebidas"
+        >
+          <ion-card class="bebida-card" [class.unavailable]="!bebida.disponible">
+            <div class="card-image-container">
+              <img 
+                [src]="bebida.imagen || 'assets/images/bebida-default.jpg'"
+                [alt]="bebida.nombre"
+                class="bebida-image"
+              />
+            </div>
+            
+            <ion-card-header>
+              <ion-card-title>{{ bebida.nombre }}</ion-card-title>
+              <ion-chip outline="true" color="medium">
+                {{ bebida.tamano }}
+              </ion-chip>
+            </ion-card-header>
+            
+            <ion-card-content>
+              <div class="bebida-footer">
+                <span class="price">{{ formatPrice(bebida.precio) }}</span>
+                <ion-button 
+                  (click)="agregarBebidaAlCarrito(bebida)"
+                  [disabled]="!bebida.disponible"
+                  size="small"
+                  color="primary"
+                >
+                  <ion-icon name="add-outline" slot="start"></ion-icon>
+                  {{ bebida.disponible ? 'Agregar' : 'No disponible' }}
+                </ion-button>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+
+  <!-- FAB del carrito -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end" *ngIf="carritoCount > 0">
+    <ion-fab-button (click)="goToCarrito()" color="primary">
+      <ion-icon name="basket-outline"></ion-icon>
+      <ion-badge color="danger">{{ carritoCount }}</ion-badge>
+    </ion-fab-button>
+  </ion-fab>
 </ion-content>

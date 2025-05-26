@@ -1,13 +1,121 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Carrito</ion-title>
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Mi Carrito</ion-title>
+    <ion-buttons slot="end" *ngIf="carrito.length > 0">
+      <ion-button fill="clear" (click)="limpiarCarrito()">
+        <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <!-- Mostrar clima simulado -->
-  <app-clima-info></app-clima-info>
+<ion-content [fullscreen]="true">
+  <!-- Carrito vacío -->
+  <div *ngIf="carrito.length === 0" class="empty-cart">
+    <ion-icon name="cart-outline" class="empty-cart-icon"></ion-icon>
+    <h2>Tu carrito está vacío</h2>
+    <p>¡Agrega algunas deliciosas pizzas!</p>
+    <ion-button (click)="continuarComprando()" expand="block" fill="solid">
+      Continuar comprando
+    </ion-button>
+  </div>
 
-  <!-- Botón de pago simulado -->
-  <app-paypal-button></app-paypal-button>
+  <!-- Items del carrito -->
+  <div *ngIf="carrito.length > 0">
+    <!-- Lista de items -->
+    <ion-list>
+      <ion-item-sliding *ngFor="let item of carrito">
+        <ion-item>
+          <div class="item-image" slot="start">
+            <img [src]="getItemImage(item)" [alt]="item.item.nombre">
+          </div>
+          
+          <ion-label>
+            <h2>{{ item.item.nombre }}</h2>
+            <p *ngIf="getItemDescription(item)">{{ getItemDescription(item) }}</p>
+            <div class="item-price">
+              <span class="unit-price">{{ formatPrice(item.precio) }} c/u</span>
+              <span class="total-price">{{ formatPrice(item.precio * item.cantidad) }}</span>
+            </div>
+          </ion-label>
+          
+          <div class="quantity-controls" slot="end">
+            <ion-button fill="clear" size="small" (click)="disminuirCantidad(item)">
+              <ion-icon name="remove-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <ion-badge color="primary" class="quantity-badge">
+              {{ item.cantidad }}
+            </ion-badge>
+            
+            <ion-button fill="clear" size="small" (click)="aumentarCantidad(item)">
+              <ion-icon name="add-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-item>
+        
+        <ion-item-options side="end">
+          <ion-item-option color="danger" (click)="removerItem(item)">
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-item-option>
+        </ion-item-options>
+      </ion-item-sliding>
+    </ion-list>
+
+    <!-- Resumen del pedido -->
+    <ion-card class="order-summary">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="receipt-outline"></ion-icon>
+          Resumen del pedido
+        </ion-card-title>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span>{{ formatPrice(subtotal) }}</span>
+        </div>
+        
+        <div class="summary-row">
+          <span>
+            <ion-icon name="location-outline"></ion-icon>
+            Domicilio
+          </span>
+          <span>{{ formatPrice(domicilio) }}</span>
+        </div>
+        
+        <hr>
+        
+        <div class="summary-row total-row">
+          <span><strong>Total</strong></span>
+          <span><strong>{{ formatPrice(total) }}</strong></span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Botones de acción -->
+    <div class="action-buttons">
+      <ion-button 
+        expand="block" 
+        fill="outline" 
+        (click)="continuarComprando()"
+        class="continue-shopping-btn">
+        <ion-icon name="add-outline" slot="start"></ion-icon>
+        Agregar más productos
+      </ion-button>
+      
+      <ion-button 
+        expand="block" 
+        fill="solid" 
+        (click)="procederAlPago()"
+        class="checkout-btn">
+        <ion-icon name="card-outline" slot="start"></ion-icon>
+        Proceder al pago
+      </ion-button>
+    </div>
+  </div>
 </ion-content>
