@@ -16,7 +16,7 @@ export class PaypalButtonComponent {
 
     setTimeout(() => {
       this.cargando = false;
-      alert('✅ Pago simulado completado correctamente.');
+      alert('✅ Pago  completado correctamente.');
       this.confirmarPedido();
     }, 2000);
   }
