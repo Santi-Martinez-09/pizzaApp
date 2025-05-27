@@ -13,13 +13,26 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <!-- Clima actual -->
+  <ion-card *ngIf="clima" class="weather-card">
+    <ion-card-header>
+      <ion-card-title>
+        Clima en {{ ciudad }}
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p>🌡️ {{ clima.main.temp }}°C</p>
+      <p>☁️ {{ clima.weather[0].description }}</p>
+      <p>💧 Humedad: {{ clima.main.humidity }}%</p>
+    </ion-card-content>
+  </ion-card>
+
   <!-- Carrito vacío -->
   <div *ngIf="carrito.length === 0" class="empty-cart">
-    <ion-icon name="bag-outline" class="empty-cart-icon"></ion-icon>
+    <ion-icon name="cart-outline" class="empty-cart-icon"></ion-icon>
     <h2>Tu carrito está vacío</h2>
     <p>¡Agrega algunas deliciosas pizzas!</p>
     <ion-button (click)="continuarComprando()" expand="block" fill="solid">
-      <ion-icon name="add-outline" slot="start"></ion-icon>
       Continuar comprando
     </ion-button>
   </div>
@@ -28,14 +41,10 @@
   <div *ngIf="carrito.length > 0">
     <!-- Lista de items -->
     <ion-list>
-      <ion-item-sliding *ngFor="let item of carrito; trackBy: trackByItemId">
+      <ion-item-sliding *ngFor="let item of carrito">
         <ion-item>
           <div class="item-image" slot="start">
-            <img 
-              [src]="getItemImage(item)" 
-              [alt]="item.item.nombre"
-              (error)="onImageError($event)"
-            >
+            <img [src]="getItemImage(item)" [alt]="item.item.nombre">
           </div>
           
           <ion-label>
@@ -48,12 +57,7 @@
           </ion-label>
           
           <div class="quantity-controls" slot="end">
-            <ion-button 
-              fill="clear" 
-              size="small" 
-              (click)="disminuirCantidad(item)"
-              [disabled]="item.cantidad <= 1"
-            >
+            <ion-button fill="clear" size="small" (click)="disminuirCantidad(item)">
               <ion-icon name="remove-outline" slot="icon-only"></ion-icon>
             </ion-button>
             
@@ -86,13 +90,13 @@
       
       <ion-card-content>
         <div class="summary-row">
-          <span>Subtotal ({{ carrito.length }} items)</span>
+          <span>Subtotal</span>
           <span>{{ formatPrice(subtotal) }}</span>
         </div>
         
         <div class="summary-row">
           <span>
-            <ion-icon name="car-outline"></ion-icon>
+            <ion-icon name="location-outline"></ion-icon>
             Domicilio
           </span>
           <span>{{ formatPrice(domicilio) }}</span>
@@ -113,8 +117,7 @@
         expand="block" 
         fill="outline" 
         (click)="continuarComprando()"
-        class="continue-shopping-btn"
-      >
+        class="continue-shopping-btn">
         <ion-icon name="add-outline" slot="start"></ion-icon>
         Agregar más productos
       </ion-button>
@@ -123,23 +126,9 @@
         expand="block" 
         fill="solid" 
         (click)="procederAlPago()"
-        class="checkout-btn"
-        [disabled]="carrito.length === 0"
-      >
+        class="checkout-btn">
         <ion-icon name="card-outline" slot="start"></ion-icon>
-        Proceder al pago ({{ formatPrice(total) }})
-      </ion-button>
-    </div>
-
-    <!-- Botón de debug (remover en producción) -->
-    <div class="debug-section" style="padding: 1rem; text-align: center;">
-      <ion-button 
-        fill="clear" 
-        size="small" 
-        (click)="debugCarrito()"
-        style="--color: var(--ion-color-medium);"
-      >
-        Debug Carrito
+        Proceder al pago
       </ion-button>
     </div>
   </div>
