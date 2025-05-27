@@ -34,7 +34,6 @@ export class CarritoService {
   limpiarCarrito(): void {
     this.carrito = [];
   }
-
   // Eliminar un producto
   eliminarProducto(id: string): void {
     this.carrito = this.carrito.filter((item) => item.id !== id);
