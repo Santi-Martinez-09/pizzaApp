@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { WeatherService } from '../services/weather.service';
 import {
   IonHeader,
   IonToolbar,
@@ -32,7 +33,8 @@ import {
   trashOutline,
   cartOutline,
   cardOutline,
-  locationOutline
+  locationOutline, 
+  receiptOutline 
 } from 'ionicons/icons';
 import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
 
@@ -65,32 +67,41 @@ import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
     IonItemOption
   ]
 })
+
 export class CarritoPage implements OnInit {
   carrito: ItemCarrito[] = [];
   subtotal: number = 0;
   domicilio: number = 5000; // Costo fijo de domicilio
   total: number = 0;
-
+  clima: any;
+  ciudad = 'Bogotá';
+  
   constructor(
     private pizzaService: PizzaService,
     private router: Router,
     private alertController: AlertController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private weatherService: WeatherService
   ) {
-    addIcons({
-      removeOutline,
-      addOutline,
-      trashOutline,
-      cartOutline,
-      cardOutline,
-      locationOutline
-    });
+    addIcons({trashOutline,cartOutline,removeOutline,addOutline,receiptOutline,locationOutline,cardOutline});
   }
 
   ngOnInit() {
+    // Suscripción al carrito
     this.pizzaService.carrito$.subscribe(carrito => {
       this.carrito = carrito;
       this.calcularTotales();
+    });
+
+    // Obtener información del clima
+    this.weatherService.obtenerClima(this.ciudad).subscribe({
+      next: (data) => {
+        this.clima = data;
+        console.log('Clima obtenido:', this.clima);
+      },
+      error: (err) => {
+        console.error('Error al obtener el clima:', err);
+      }
     });
   }
 
@@ -176,7 +187,8 @@ export class CarritoPage implements OnInit {
         carrito: this.carrito,
         total: this.total,
         subtotal: this.subtotal,
-        domicilio: this.domicilio
+        domicilio: this.domicilio,
+        clima: this.clima // Incluir información del clima en el estado
       }
     });
   }
@@ -208,5 +220,19 @@ export class CarritoPage implements OnInit {
       return (item.item as any).descripcion || '';
     }
     return `Tamaño: ${(item.item as any).tamano || ''}`;
+  }
+
+  // Métodos adicionales para mostrar información del clima en el template
+  getTemperatura(): string {
+    return this.clima?.main?.temp ? `${Math.round(this.clima.main.temp)}°C` : '';
+  }
+
+  getDescripcionClima(): string {
+    return this.clima?.weather?.[0]?.description || '';
+  }
+
+  getIconoClima(): string {
+    return this.clima?.weather?.[0]?.icon ? 
+      `https://openweathermap.org/img/w/${this.clima.weather[0].icon}.png` : '';
   }
 }
