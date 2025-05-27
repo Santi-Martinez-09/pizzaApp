@@ -22,5 +22,6 @@ bootstrapApplication(AppComponent, {
     provideDatabase(() => getDatabase()),
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
+    provideHttpClient(),
   ],
 });

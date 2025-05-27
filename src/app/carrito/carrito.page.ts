@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { WeatherService } from '../services/weather.service';
+import { CarritoService } from '../services/carrito.service'; // Servicio adicional
 import {
   IonHeader,
   IonToolbar,
@@ -34,9 +35,11 @@ import {
   cartOutline,
   cardOutline,
   locationOutline, 
-  receiptOutline 
-} from 'ionicons/icons';
+  receiptOutline, pizzaOutline, basketOutline } from 'ionicons/icons';
 import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
+
+// Declaración para PayPal
+declare var paypal: any;
 
 @Component({
   selector: 'app-carrito',
@@ -68,30 +71,39 @@ import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
   ]
 })
 
-export class CarritoPage implements OnInit {
+export class CarritoPage implements OnInit, AfterViewInit {
   carrito: ItemCarrito[] = [];
+  carritoAdicional: any[] = []; // Para productos del CarritoService adicional
   subtotal: number = 0;
   domicilio: number = 5000; // Costo fijo de domicilio
   total: number = 0;
+  totalAdicional: number = 0; // Total del servicio adicional
   clima: any;
   ciudad = 'Bogotá';
   
   constructor(
     private pizzaService: PizzaService,
+    private carritoService: CarritoService, // Servicio adicional
     private router: Router,
     private alertController: AlertController,
     private toastController: ToastController,
     private weatherService: WeatherService
   ) {
-    addIcons({trashOutline,cartOutline,removeOutline,addOutline,receiptOutline,locationOutline,cardOutline});
+    addIcons({trashOutline,cartOutline,pizzaOutline,removeOutline,addOutline,basketOutline,receiptOutline,locationOutline,cardOutline});
   }
 
   ngOnInit() {
-    // Suscripción al carrito
+    // Suscripción al carrito principal (PizzaService)
     this.pizzaService.carrito$.subscribe(carrito => {
       this.carrito = carrito;
       this.calcularTotales();
+      // Recargar botón de PayPal cuando cambie el carrito
+      setTimeout(() => this.loadPayPalButton(), 100);
     });
+
+    // Cargar carrito adicional (CarritoService)
+    this.carritoAdicional = this.carritoService.obtenerCarrito();
+    this.totalAdicional = this.carritoService.obtenerTotal();
 
     // Obtener información del clima
     this.weatherService.obtenerClima(this.ciudad).subscribe({
@@ -105,11 +117,107 @@ export class CarritoPage implements OnInit {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Cargar el botón de PayPal después de que la vista se haya inicializado
+    setTimeout(() => this.loadPayPalButton(), 500);
+  }
+
+  loadPayPalButton() {
+    // Verificar que PayPal esté disponible y que haya items en el carrito
+    const totalItems = this.carrito.length + this.carritoAdicional.length;
+    if (typeof paypal !== 'undefined' && totalItems > 0) {
+      // Limpiar el contenedor antes de crear un nuevo botón
+      const container = document.getElementById('#paypal-button-container');
+      if (container) {
+        container.innerHTML = '';
+      }
+
+      // Calcular total combinado para PayPal
+      const totalCombinado = this.total + this.totalAdicional;
+      const totalUSD = (totalCombinado / 4000).toFixed(2); // 1 USD ≈ 4000 COP
+
+      paypal.Buttons({
+        createOrder: (data: any, actions: any) => {
+          // Combinar items de ambos carritos para PayPal
+          const itemsPayPal = [
+            ...this.carrito.map(item => ({
+              name: item.item.nombre,
+              quantity: item.cantidad.toString(),
+              unit_amount: {
+                currency_code: 'USD',
+                value: ((item.precio * item.cantidad) / 4000).toFixed(2)
+              }
+            })),
+            ...this.carritoAdicional.map(item => ({
+              name: item.nombre || 'Producto',
+              quantity: item.cantidad?.toString() || '1',
+              unit_amount: {
+                currency_code: 'USD',
+                value: ((item.precio || 0) / 4000).toFixed(2)
+              }
+            }))
+          ];
+
+          return actions.order.create({
+            purchase_units: [{
+              amount: {
+                value: totalUSD,
+                currency_code: 'USD'
+              },
+              description: `Pedido completo - ${totalItems} items`,
+              items: itemsPayPal
+            }]
+          });
+        },
+        onApprove: (data: any, actions: any) => {
+          return actions.order.capture().then((details: any) => {
+            console.log('Pago completado:', details);
+            this.pagoExitoso(details);
+          });
+        },
+        onError: (err: any) => {
+          console.error('Error en pago PayPal:', err);
+          this.presentToast('Error al procesar el pago con PayPal', 'danger');
+        },
+        onCancel: (data: any) => {
+          console.log('Pago cancelado:', data);
+          this.presentToast('Pago cancelado', 'warning');
+        }
+      }).render('#paypal-button-container');
+    }
+  }
+
+  async pagoExitoso(details: any) {
+    // Mostrar mensaje de éxito
+    const alert = await this.alertController.create({
+      header: '¡Pago Exitoso!',
+      message: `Gracias ${details.payer.name.given_name}! Tu pedido ha sido procesado correctamente.`,
+      buttons: [
+        {
+          text: 'OK',
+          handler: () => {
+            // Limpiar ambos carritos después del pago exitoso
+            this.pizzaService.limpiarCarrito();
+            this.limpiarCarritoAdicional();
+            // Navegar a la página de inicio o confirmación
+            this.router.navigate(['/home']);
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
   calcularTotales() {
+    // Calcular totales del carrito principal
     this.subtotal = this.carrito.reduce((total, item) => 
       total + (item.precio * item.cantidad), 0
     );
     this.total = this.subtotal + (this.carrito.length > 0 ? this.domicilio : 0);
+
+    // Actualizar total del carrito adicional
+    this.totalAdicional = this.carritoService.obtenerTotal();
   }
 
   formatPrice(price: number): string {
@@ -120,6 +228,7 @@ export class CarritoPage implements OnInit {
     }).format(price);
   }
 
+  // Métodos para carrito principal (PizzaService)
   aumentarCantidad(item: ItemCarrito) {
     this.pizzaService.actualizarCantidad(item.id, item.cantidad + 1);
   }
@@ -154,10 +263,34 @@ export class CarritoPage implements OnInit {
     await alert.present();
   }
 
+  // Métodos para carrito adicional (CarritoService)
+  eliminar(id: string) {
+    this.carritoService.eliminarProducto(id);
+    this.carritoAdicional = this.carritoService.obtenerCarrito();
+    this.totalAdicional = this.carritoService.obtenerTotal();
+    this.presentToast('Producto eliminado del carrito adicional');
+  }
+
+  limpiarCarritoAdicional() {
+    // Si el CarritoService tiene un método para limpiar
+    if (this.carritoService.limpiarCarrito) {
+      this.carritoService.limpiarCarrito();
+    } else {
+      // Si no tiene método de limpiar, eliminar uno por uno
+      this.carritoAdicional.forEach(item => {
+        if (item.id) {
+          this.carritoService.eliminarProducto(item.id);
+        }
+      });
+    }
+    this.carritoAdicional = [];
+    this.totalAdicional = 0;
+  }
+
   async limpiarCarrito() {
     const alert = await this.alertController.create({
-      header: 'Limpiar carrito',
-      message: '¿Deseas remover todos los items del carrito?',
+      header: 'Limpiar carritos',
+      message: '¿Deseas remover todos los items de ambos carritos?',
       buttons: [
         {
           text: 'Cancelar',
@@ -167,7 +300,8 @@ export class CarritoPage implements OnInit {
           text: 'Limpiar',
           handler: () => {
             this.pizzaService.limpiarCarrito();
-            this.presentToast('Carrito limpiado');
+            this.limpiarCarritoAdicional();
+            this.presentToast('Carritos limpiados');
           }
         }
       ]
@@ -177,18 +311,21 @@ export class CarritoPage implements OnInit {
   }
 
   procederAlPago() {
-    if (this.carrito.length === 0) {
-      this.presentToast('El carrito está vacío', 'warning');
+    const totalItems = this.carrito.length + this.carritoAdicional.length;
+    if (totalItems === 0) {
+      this.presentToast('Los carritos están vacíos', 'warning');
       return;
     }
     
     this.router.navigate(['/pago'], {
       state: {
         carrito: this.carrito,
-        total: this.total,
+        carritoAdicional: this.carritoAdicional,
+        total: this.total + this.totalAdicional,
         subtotal: this.subtotal,
+        totalAdicional: this.totalAdicional,
         domicilio: this.domicilio,
-        clima: this.clima // Incluir información del clima en el estado
+        clima: this.clima
       }
     });
   }
@@ -222,7 +359,7 @@ export class CarritoPage implements OnInit {
     return `Tamaño: ${(item.item as any).tamano || ''}`;
   }
 
-  // Métodos adicionales para mostrar información del clima en el template
+  // Métodos para información del clima
   getTemperatura(): string {
     return this.clima?.main?.temp ? `${Math.round(this.clima.main.temp)}°C` : '';
   }
@@ -234,5 +371,15 @@ export class CarritoPage implements OnInit {
   getIconoClima(): string {
     return this.clima?.weather?.[0]?.icon ? 
       `https://openweathermap.org/img/w/${this.clima.weather[0].icon}.png` : '';
+  }
+
+  // Método para obtener el total combinado
+  getTotalCombinado(): number {
+    return this.total + this.totalAdicional;
+  }
+
+  // Método para verificar si hay items en cualquier carrito
+  tieneItems(): boolean {
+    return this.carrito.length > 0 || this.carritoAdicional.length > 0;
   }
 }

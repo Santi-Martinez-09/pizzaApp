@@ -1,3 +1,39 @@
+// Weather Card Stylos Xd(movido al principio para mejor organización)
+.weather-card {
+  margin: 1rem;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  ion-card-header {
+    ion-card-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      &:before {
+        content: '🌤️';
+        font-size: 1.5rem;
+      }
+    }
+  }
+  
+  ion-card-content {
+    p {
+      margin: 0.5rem 0;
+      font-size: 0.95rem;
+      color: var(--ion-color-dark);
+      
+      &:first-child {
+        font-weight: 600;
+        color: var(--ion-color-primary);
+      }
+    }
+  }
+}
+
 // Empty Cart Styles
 .empty-cart {
   display: flex;
@@ -237,6 +273,10 @@ ion-list {
   }
 }
 
+.weather-card {
+  animation: slideInUp 0.2s ease-out;
+}
+
 ion-item-sliding {
   animation: slideInUp 0.3s ease-out;
 }
@@ -249,8 +289,35 @@ ion-item-sliding {
   animation: slideInUp 0.5s ease-out;
 }
 
+// Loading States
+.loading-item {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 12px;
+  height: 100px;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 // Responsive Design
 @media (max-width: 768px) {
+  .weather-card {
+    margin: 0.5rem;
+    
+    ion-card-content p {
+      font-size: 0.9rem;
+    }
+  }
+  
   .empty-cart {
     padding: 2rem 1rem;
     
@@ -289,24 +356,5 @@ ion-item-sliding {
   
   .action-buttons {
     padding: 0.5rem;
-  }
-}
-
-// Loading States
-.loading-item {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-  border-radius: 12px;
-  height: 100px;
-  margin-bottom: 0.5rem;
-}
-
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
   }
 }
