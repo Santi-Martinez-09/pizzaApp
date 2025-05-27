@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { WeatherService } from '../services/weather.service';
+import { Subscription } from 'rxjs';
 import {
   IonHeader,
   IonToolbar,
@@ -33,8 +33,8 @@ import {
   trashOutline,
   cartOutline,
   cardOutline,
-  locationOutline, 
-  receiptOutline 
+  receiptOutline,
+  bagOutline
 } from 'ionicons/icons';
 import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
 
@@ -67,42 +67,45 @@ import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
     IonItemOption
   ]
 })
-
-export class CarritoPage implements OnInit {
+export class CarritoPage implements OnInit, OnDestroy {
   carrito: ItemCarrito[] = [];
   subtotal: number = 0;
   domicilio: number = 5000; // Costo fijo de domicilio
   total: number = 0;
-  clima: any;
-  ciudad = 'Bogotá';
+  private carritoSubscription?: Subscription;
   
   constructor(
     private pizzaService: PizzaService,
     private router: Router,
     private alertController: AlertController,
-    private toastController: ToastController,
-    private weatherService: WeatherService
+    private toastController: ToastController
   ) {
-    addIcons({trashOutline,cartOutline,removeOutline,addOutline,receiptOutline,locationOutline,cardOutline});
+    addIcons({
+      trashOutline,
+      cartOutline,
+      removeOutline,
+      addOutline,
+      receiptOutline,
+      cardOutline,
+      bagOutline
+    });
   }
 
   ngOnInit() {
+    console.log('CarritoPage: Iniciando componente');
+    
     // Suscripción al carrito
-    this.pizzaService.carrito$.subscribe(carrito => {
+    this.carritoSubscription = this.pizzaService.carrito$.subscribe(carrito => {
+      console.log('CarritoPage: Carrito actualizado', carrito);
       this.carrito = carrito;
       this.calcularTotales();
     });
+  }
 
-    // Obtener información del clima
-    this.weatherService.obtenerClima(this.ciudad).subscribe({
-      next: (data) => {
-        this.clima = data;
-        console.log('Clima obtenido:', this.clima);
-      },
-      error: (err) => {
-        console.error('Error al obtener el clima:', err);
-      }
-    });
+  ngOnDestroy() {
+    if (this.carritoSubscription) {
+      this.carritoSubscription.unsubscribe();
+    }
   }
 
   calcularTotales() {
@@ -110,6 +113,12 @@ export class CarritoPage implements OnInit {
       total + (item.precio * item.cantidad), 0
     );
     this.total = this.subtotal + (this.carrito.length > 0 ? this.domicilio : 0);
+    
+    console.log('CarritoPage: Totales calculados', {
+      subtotal: this.subtotal,
+      domicilio: this.domicilio,
+      total: this.total
+    });
   }
 
   formatPrice(price: number): string {
@@ -121,10 +130,12 @@ export class CarritoPage implements OnInit {
   }
 
   aumentarCantidad(item: ItemCarrito) {
+    console.log('CarritoPage: Aumentando cantidad', item);
     this.pizzaService.actualizarCantidad(item.id, item.cantidad + 1);
   }
 
   disminuirCantidad(item: ItemCarrito) {
+    console.log('CarritoPage: Disminuyendo cantidad', item);
     if (item.cantidad > 1) {
       this.pizzaService.actualizarCantidad(item.id, item.cantidad - 1);
     } else {
@@ -144,6 +155,7 @@ export class CarritoPage implements OnInit {
         {
           text: 'Remover',
           handler: () => {
+            console.log('CarritoPage: Removiendo item', item);
             this.pizzaService.removerDelCarrito(item.id);
             this.presentToast(`${item.item.nombre} removido del carrito`);
           }
@@ -155,6 +167,11 @@ export class CarritoPage implements OnInit {
   }
 
   async limpiarCarrito() {
+    if (this.carrito.length === 0) {
+      this.presentToast('El carrito ya está vacío', 'warning');
+      return;
+    }
+
     const alert = await this.alertController.create({
       header: 'Limpiar carrito',
       message: '¿Deseas remover todos los items del carrito?',
@@ -166,6 +183,7 @@ export class CarritoPage implements OnInit {
         {
           text: 'Limpiar',
           handler: () => {
+            console.log('CarritoPage: Limpiando carrito');
             this.pizzaService.limpiarCarrito();
             this.presentToast('Carrito limpiado');
           }
@@ -182,18 +200,24 @@ export class CarritoPage implements OnInit {
       return;
     }
     
+    console.log('CarritoPage: Procediendo al pago', {
+      carrito: this.carrito,
+      total: this.total
+    });
+    
+    // Aquí podrías pasar los datos del carrito a la página de pago
     this.router.navigate(['/pago'], {
       state: {
         carrito: this.carrito,
         total: this.total,
         subtotal: this.subtotal,
-        domicilio: this.domicilio,
-        clima: this.clima // Incluir información del clima en el estado
+        domicilio: this.domicilio
       }
     });
   }
 
   continuarComprando() {
+    console.log('CarritoPage: Continuando compras');
     this.router.navigate(['/home']);
   }
 
@@ -208,31 +232,42 @@ export class CarritoPage implements OnInit {
   }
 
   getItemImage(item: ItemCarrito): string {
-    if (item.tipo === 'pizza') {
-      return item.item.imagen || 'assets/images/pizza-default.jpg';
-    } else {
-      return item.item.imagen || 'assets/images/bebida-default.jpg';
-    }
+    // Imagen por defecto según el tipo
+    const defaultImage = item.tipo === 'pizza' 
+      ? 'assets/images/pizza-default.jpg' 
+      : 'assets/images/bebida-default.jpg';
+    
+    return item.item.imagen || defaultImage;
   }
 
   getItemDescription(item: ItemCarrito): string {
     if (item.tipo === 'pizza') {
-      return (item.item as any).descripcion || '';
+      const pizza = item.item as any;
+      return pizza.descripcion || `Pizza ${pizza.tamano || 'mediana'}`;
+    } else {
+      const bebida = item.item as any;
+      return `Tamaño: ${bebida.tamano || ''}`;
     }
-    return `Tamaño: ${(item.item as any).tamano || ''}`;
   }
 
-  // Métodos adicionales para mostrar información del clima en el template
-  getTemperatura(): string {
-    return this.clima?.main?.temp ? `${Math.round(this.clima.main.temp)}°C` : '';
+  // Método para debugging - puedes removerlo en producción
+  debugCarrito() {
+    console.log('Estado actual del carrito:', {
+      items: this.carrito,
+      subtotal: this.subtotal,
+      domicilio: this.domicilio,
+      total: this.total
+    });
   }
 
-  getDescripcionClima(): string {
-    return this.clima?.weather?.[0]?.description || '';
+  // TrackBy function para mejor rendimiento en ngFor
+  trackByItemId(index: number, item: ItemCarrito): string {
+    return item.id;
   }
 
-  getIconoClima(): string {
-    return this.clima?.weather?.[0]?.icon ? 
-      `https://openweathermap.org/img/w/${this.clima.weather[0].icon}.png` : '';
+  // Manejo de errores de imagen
+  onImageError(event: any) {
+    console.log('Error cargando imagen, usando imagen por defecto');
+    event.target.src = 'assets/images/default-product.jpg';
   }
 }
