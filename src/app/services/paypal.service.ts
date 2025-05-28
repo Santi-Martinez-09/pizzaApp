@@ -18,7 +18,7 @@ export class PayPalLoaderService {
   private loadPromise: Promise<boolean> | null = null;
 
   private config: PayPalSDKConfig = {
-    clientId: 'AbqotKe77My2Q-CA91Yar4U1ODuwWAUqZ_zpi_GZb0P5M7j5JhGu8u65XlWHC3Iq86C2IvNk0lkrwFoe',
+    clientId: 'EMtwIRygs2Ts81JfdtqiHEV5OxM9yt9fktrZ3Ryv5KinkYK7gs803RyjRXAE2_UwKxVWzSktDCSzK3Ki',
     currency: 'USD',
     intent: 'capture',
     locale: 'es-ES' 
