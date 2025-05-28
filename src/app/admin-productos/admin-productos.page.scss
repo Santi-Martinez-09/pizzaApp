@@ -1,0 +1,14 @@
+// Estilos para los modales
+.add-product-modal {
+  --width: 90%;
+  --max-width: 500px;
+  --height: 90%;
+  --border-radius: 16px;
+}
+
+@media (max-width: 768px) {
+  .add-product-modal {
+    --width: 95%;
+    --height: 95%;
+  }
+}

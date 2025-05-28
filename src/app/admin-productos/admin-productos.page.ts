@@ -1,6 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+// Agregar estas líneas al inicio del archivo (después de las importaciones existentes)
+import { AddPizzaModalComponent, AddBebidaModalComponent } from '../components/agregarProducto/add-product-modals.component';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { ModalController, ActionSheetController } from '@ionic/angular/standalone';
 import {
   IonContent,
   IonHeader,
@@ -56,6 +60,7 @@ import { PizzaService, Pizza, Bebida } from '../services/pizza/pizza.service';
   styleUrls: ['./admin-productos.page.scss'],
   standalone: true,
   imports: [
+    ReactiveFormsModule ,
     IonContent,
     IonHeader,
     IonTitle,
@@ -109,12 +114,15 @@ export class AdminProductosPage implements OnInit {
   };
 
   constructor(
-    private authService: AuthService,
-    private pizzaService: PizzaService,
-    private alertController: AlertController,
-    private toastController: ToastController,
-    private loadingController: LoadingController
-  ) {
+  private authService: AuthService,
+  private pizzaService: PizzaService,
+  private alertController: AlertController,
+  private toastController: ToastController,
+  private loadingController: LoadingController,
+  private modalController: ModalController, // ← AGREGAR
+  private actionSheetController: ActionSheetController, // ← AGREGAR  
+  private formBuilder: FormBuilder // ← AGREGAR
+) {
     addIcons({
       addOutline,
       createOutline,
@@ -309,9 +317,121 @@ export class AdminProductosPage implements OnInit {
     }
   }
 
-  async addNewProduct() {
-    this.presentToast('Función de agregar producto en desarrollo', 'warning');
+async addNewProduct() {
+  const actionSheet = await this.actionSheetController.create({
+    header: '➕ Agregar Producto',
+    buttons: [
+      {
+        text: '🍕 Nueva Pizza',
+        handler: () => {
+          this.showAddPizzaModal();
+        }
+      },
+      {
+        text: '🥤 Nueva Bebida',
+        handler: () => {
+          this.showAddBebidaModal();
+        }
+      },
+      {
+        text: 'Cancelar',
+        role: 'cancel'
+      }
+    ]
+  });
+
+  await actionSheet.present();
+}
+
+// Agregar estos métodos nuevos al final de la clase:
+async showAddPizzaModal() {
+  const modal = await this.modalController.create({
+    component: AddPizzaModalComponent,
+    cssClass: 'add-product-modal'
+  });
+
+  modal.onDidDismiss().then(async (result) => {
+    if (result.data && result.data.pizza) {
+      await this.handleAddPizza(result.data.pizza);
+    }
+  });
+
+  await modal.present();
+}
+
+async showAddBebidaModal() {
+  const modal = await this.modalController.create({
+    component: AddBebidaModalComponent, 
+    cssClass: 'add-product-modal'
+  });
+
+  modal.onDidDismiss().then(async (result) => {
+    if (result.data && result.data.bebida) {
+      await this.handleAddBebida(result.data.bebida);
+    }
+  });
+
+  await modal.present();
+}
+
+private async handleAddPizza(pizzaData: any) {
+  const loading = await this.loadingController.create({
+    message: 'Agregando pizza...',
+    spinner: 'crescent'
+  });
+  await loading.present();
+
+  try {
+    const nuevaPizza = {
+      nombre: pizzaData.nombre,
+      descripcion: pizzaData.descripcion,
+      precio: pizzaData.precio,
+      ingredientes: pizzaData.ingredientes,
+      categoria: pizzaData.categoria,
+      tamano: pizzaData.tamano,
+      imagen: pizzaData.imagen || '',
+      disponible: pizzaData.disponible
+    };
+
+    await this.pizzaService.addPizza(nuevaPizza);
+    await this.loadData();
+    await loading.dismiss();
+    
+    this.presentToast(`🍕 ${nuevaPizza.nombre} agregada exitosamente`, 'success');
+    
+  } catch (error) {
+    await loading.dismiss();
+    this.presentToast('Error agregando la pizza', 'danger');
   }
+}
+
+private async handleAddBebida(bebidaData: any) {
+  const loading = await this.loadingController.create({
+    message: 'Agregando bebida...',
+    spinner: 'crescent'
+  });
+  await loading.present();
+
+  try {
+    const nuevaBebida = {
+      nombre: bebidaData.nombre,
+      precio: bebidaData.precio,
+      tamano: bebidaData.tamano,
+      imagen: bebidaData.imagen || '',
+      disponible: bebidaData.disponible
+    };
+
+    await this.pizzaService.addBebida(nuevaBebida);
+    await this.loadData();
+    await loading.dismiss();
+    
+    this.presentToast(`🥤 ${nuevaBebida.nombre} agregada exitosamente`, 'success');
+    
+  } catch (error) {
+    await loading.dismiss();
+    this.presentToast('Error agregando la bebida', 'danger');
+  }
+}
 
   // Utilidades
   formatPrice(price: number): string {
