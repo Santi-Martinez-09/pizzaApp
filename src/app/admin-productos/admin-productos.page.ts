@@ -1,20 +1,357 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  IonButtons,
+  IonMenuButton,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonButton,
+  IonIcon,
+  IonBadge,
+  IonChip,
+  IonFab,
+  IonFabButton,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonSearchbar,
+  IonSegment,
+  IonSegmentButton,
+  IonRefresher,
+  IonRefresherContent,
+  IonSpinner,
+  AlertController,
+  ToastController,
+  LoadingController
+} from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import {
+  addOutline,
+  createOutline,
+  trashOutline,
+  eyeOutline,
+  searchOutline,
+  filterOutline,
+  statsChartOutline,
+  storefrontOutline,
+  pizzaOutline,
+  refreshOutline
+} from 'ionicons/icons';
+import { AuthService } from '../services/auth.service';
+import { PizzaService, Pizza, Bebida } from '../services/pizza/pizza.service';
 
 @Component({
   selector: 'app-admin-productos',
   templateUrl: './admin-productos.page.html',
   styleUrls: ['./admin-productos.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, CommonModule, FormsModule]
+  imports: [
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    IonButtons,
+    IonMenuButton,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonButton,
+    IonIcon,
+    IonBadge,
+    IonChip,
+    IonFab,
+    IonFabButton,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonSearchbar,
+    IonSegment,
+    IonSegmentButton,
+    IonRefresher,
+    IonRefresherContent,
+    IonSpinner,
+    CommonModule,
+    FormsModule
+  ]
 })
 export class AdminProductosPage implements OnInit {
+  pizzas: Pizza[] = [];
+  bebidas: Bebida[] = [];
+  filteredPizzas: Pizza[] = [];
+  filteredBebidas: Bebida[] = [];
+  
+  selectedSegment: 'pizzas' | 'bebidas' | 'estadisticas' = 'pizzas';
+  searchTerm: string = '';
+  isLoading: boolean = false;
+  
+  // Estadísticas
+  stats = {
+    totalPizzas: 0,
+    totalBebidas: 0,
+    pizzasDisponibles: 0,
+    bebidasDisponibles: 0,
+    precioPromedioPizza: 0,
+    precioPromedioBebida: 0
+  };
 
-  constructor() { }
-
-  ngOnInit() {
+  constructor(
+    private authService: AuthService,
+    private pizzaService: PizzaService,
+    private alertController: AlertController,
+    private toastController: ToastController,
+    private loadingController: LoadingController
+  ) {
+    addIcons({
+      addOutline,
+      createOutline,
+      trashOutline,
+      eyeOutline,
+      searchOutline,
+      filterOutline,
+      statsChartOutline,
+      storefrontOutline,
+      pizzaOutline,
+      refreshOutline
+    });
   }
 
+  async ngOnInit() {
+    console.log('🛠️ AdminProductosPage: Inicializando...');
+    
+    // Verificar permisos de administrador
+    if (!this.authService.isAdmin()) {
+      console.error('❌ Acceso denegado - no es administrador');
+      this.presentToast('Acceso denegado', 'danger');
+      return;
+    }
+    
+    await this.loadData();
+  }
+
+  async loadData() {
+    this.isLoading = true;
+    
+    try {
+      console.log('🛠️ Cargando datos de productos...');
+      
+      // Cargar pizzas y bebidas en paralelo
+      const [pizzasData, bebidasData] = await Promise.all([
+        this.pizzaService.getPizzas(),
+        this.pizzaService.getBebidas()
+      ]);
+      
+      this.pizzas = pizzasData;
+      this.bebidas = bebidasData;
+      
+      // Aplicar filtros iniciales
+      this.applyFilters();
+      
+      // Calcular estadísticas
+      this.calculateStats();
+      
+      console.log('✅ Datos cargados:', {
+        pizzas: this.pizzas.length,
+        bebidas: this.bebidas.length
+      });
+      
+    } catch (error) {
+      console.error('❌ Error cargando datos:', error);
+      this.presentToast('Error cargando productos', 'danger');
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async refreshData(event: any) {
+    console.log('🔄 Refrescando datos...');
+    await this.loadData();
+    event.target.complete();
+    this.presentToast('Datos actualizados', 'success');
+  }
+
+  onSegmentChange(event: any) {
+    this.selectedSegment = event.detail.value;
+    console.log('🛠️ Segmento cambiado a:', this.selectedSegment);
+  }
+
+  onSearchChange(event: any) {
+    this.searchTerm = event.detail.value.toLowerCase();
+    this.applyFilters();
+  }
+
+  applyFilters() {
+    // Filtrar pizzas
+    this.filteredPizzas = this.pizzas.filter(pizza =>
+      pizza.nombre.toLowerCase().includes(this.searchTerm) ||
+      pizza.descripcion.toLowerCase().includes(this.searchTerm) ||
+      pizza.categoria.toLowerCase().includes(this.searchTerm)
+    );
+
+    // Filtrar bebidas
+    this.filteredBebidas = this.bebidas.filter(bebida =>
+      bebida.nombre.toLowerCase().includes(this.searchTerm) ||
+      bebida.tamano.toLowerCase().includes(this.searchTerm)
+    );
+  }
+
+  calculateStats() {
+    this.stats = {
+      totalPizzas: this.pizzas.length,
+      totalBebidas: this.bebidas.length,
+      pizzasDisponibles: this.pizzas.filter(p => p.disponible).length,
+      bebidasDisponibles: this.bebidas.filter(b => b.disponible).length,
+      precioPromedioPizza: this.pizzas.length > 0 ? 
+        this.pizzas.reduce((sum, p) => sum + p.precio, 0) / this.pizzas.length : 0,
+      precioPromedioBebida: this.bebidas.length > 0 ?
+        this.bebidas.reduce((sum, b) => sum + b.precio, 0) / this.bebidas.length : 0
+    };
+  }
+
+  async toggleProductAvailability(product: Pizza | Bebida, type: 'pizza' | 'bebida') {
+    const loading = await this.loadingController.create({
+      message: 'Actualizando disponibilidad...',
+      spinner: 'crescent'
+    });
+    await loading.present();
+
+    try {
+      const newStatus = !product.disponible;
+      
+      if (type === 'pizza') {
+        await this.pizzaService.updatePizza(product.id!, { disponible: newStatus });
+        const pizzaIndex = this.pizzas.findIndex(p => p.id === product.id);
+        if (pizzaIndex !== -1) {
+          this.pizzas[pizzaIndex].disponible = newStatus;
+        }
+      } else {
+        // Implementar updateBebida cuando esté disponible
+        console.log('Actualizar bebida pendiente de implementar');
+      }
+      
+      this.applyFilters();
+      this.calculateStats();
+      
+      await loading.dismiss();
+      this.presentToast(
+        `${product.nombre} ${newStatus ? 'activado' : 'desactivado'}`,
+        'success'
+      );
+      
+    } catch (error) {
+      await loading.dismiss();
+      console.error('Error actualizando disponibilidad:', error);
+      this.presentToast('Error actualizando producto', 'danger');
+    }
+  }
+
+  async deleteProduct(product: Pizza | Bebida, type: 'pizza' | 'bebida') {
+    const alert = await this.alertController.create({
+      header: '⚠️ Eliminar producto',
+      message: `¿Estás seguro de que deseas eliminar "${product.nombre}"? Esta acción no se puede deshacer.`,
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel'
+        },
+        {
+          text: 'Eliminar',
+          role: 'destructive',
+          handler: async () => {
+            await this.performDelete(product, type);
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async performDelete(product: Pizza | Bebida, type: 'pizza' | 'bebida') {
+    const loading = await this.loadingController.create({
+      message: 'Eliminando producto...',
+      spinner: 'crescent'
+    });
+    await loading.present();
+
+    try {
+      if (type === 'pizza') {
+        await this.pizzaService.deletePizza(product.id!);
+        this.pizzas = this.pizzas.filter(p => p.id !== product.id);
+      } else {
+        // Implementar deleteBebida cuando esté disponible
+        console.log('Eliminar bebida pendiente de implementar');
+      }
+      
+      this.applyFilters();
+      this.calculateStats();
+      
+      await loading.dismiss();
+      this.presentToast(`${product.nombre} eliminado`, 'success');
+      
+    } catch (error) {
+      await loading.dismiss();
+      console.error('Error eliminando producto:', error);
+      this.presentToast('Error eliminando producto', 'danger');
+    }
+  }
+
+  async addNewProduct() {
+    this.presentToast('Función de agregar producto en desarrollo', 'warning');
+  }
+
+  // Utilidades
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0
+    }).format(price);
+  }
+
+  getCategoryIcon(categoria: string): string {
+    const icons: { [key: string]: string } = {
+      'clasica': '🍕',
+      'especial': '⭐',
+      'vegana': '🌱',
+      'personalizada': '🎨'
+    };
+    return icons[categoria] || '🍕';
+  }
+
+  getStatusColor(disponible: boolean): string {
+    return disponible ? 'success' : 'danger';
+  }
+
+  getStatusText(disponible: boolean): string {
+    return disponible ? 'Disponible' : 'No disponible';
+  }
+
+  trackByProductId(index: number, product: Pizza | Bebida): string {
+    return product.id || index.toString();
+  }
+
+  private async presentToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      position: 'top',
+      color,
+      translucent: true
+    });
+    await toast.present();
+  }
 }

@@ -1,63 +1,169 @@
 <ion-app>
   <ion-split-pane contentId="main-content" *ngIf="isLoggedIn()">
     
-    <!-- Menú lateral -->
-    <ion-menu contentId="main-content" type="overlay">
-      <ion-header>
+    <!-- Menú lateral mejorado -->
+    <ion-menu contentId="main-content" type="overlay" class="side-menu">
+      
+      <!-- Header del menú -->
+      <ion-header class="menu-header">
         <ion-toolbar color="primary">
-          <ion-title>🍕 PizzApp</ion-title>
+          <ion-title class="menu-title">
+            <div class="app-brand">
+              <span class="app-logo">🍕</span>
+              <span class="app-name">PizzApp</span>
+            </div>
+          </ion-title>
         </ion-toolbar>
       </ion-header>
       
-      <ion-content>
+      <ion-content class="menu-content">
+        
         <!-- Información del usuario -->
-        <ion-list class="user-info">
-          <ion-item>
-            <ion-icon name="person-circle" slot="start" size="large"></ion-icon>
-            <ion-label>
-              <h2>{{ getUserDisplayName() }}</h2>
-              <p>{{ authService.getUserProfile()?.role === 'admin' ? 'Administrador' : 'Cliente' }}</p>
-            </ion-label>
-          </ion-item>
-        </ion-list>
-
-        <!-- Páginas principales -->
-        <ion-list>
-          <ion-list-header>
-            <ion-label>Menú Principal</ion-label>
-          </ion-list-header>
+        <div class="user-section" (click)="showAccountInfo()" *ngIf="userProfile">
+          <div class="user-avatar">
+            <ion-avatar *ngIf="userProfile?.profileImage; else initials">
+              <img [src]="userProfile.profileImage" [alt]="userProfile.displayName || 'Usuario'">
+            </ion-avatar>
+            <ng-template #initials>
+              <div class="avatar-initials">
+                {{ getUserInitials() }}
+              </div>
+            </ng-template>
+          </div>
           
-          <ion-menu-toggle auto-hide="false" *ngFor="let p of appPages">
-            <ion-item routerDirection="root" [routerLink]="[p.url]" lines="none" detail="false" routerLinkActive="selected">
-              <ion-icon aria-hidden="true" slot="start" [name]="p.icon + '-outline'"></ion-icon>
-              <ion-label>{{ p.title }}</ion-label>
-            </ion-item>
-          </ion-menu-toggle>
-        </ion-list>
-
-        <!-- Páginas de administrador -->
-        <ion-list *ngIf="isAdmin()">
-          <ion-list-header>
-            <ion-label>Administración</ion-label>
-          </ion-list-header>
+          <div class="user-info">
+            <h3 class="user-name">{{ userProfile?.displayName || 'Usuario' }}</h3>
+            <p class="user-email">{{ userProfile?.email || '' }}</p>
+            
+            <ion-chip [color]="getUserRoleColor()" class="role-chip" *ngIf="userProfile?.role">
+              <ion-icon 
+                [name]="userProfile.role === 'admin' ? 'shield-checkmark-outline' : 'person-outline'"
+                slot="start">
+              </ion-icon>
+              <ion-label>{{ getUserRole() }}</ion-label>
+            </ion-chip>
+            
+            <p class="user-stats" *ngIf="userProfile?.stats && getUserStats()">
+              {{ getUserStats() }}
+            </p>
+          </div>
           
-          <ion-menu-toggle auto-hide="false" *ngFor="let p of adminPages">
-            <ion-item routerDirection="root" [routerLink]="[p.url]" lines="none" detail="false" routerLinkActive="selected">
-              <ion-icon aria-hidden="true" slot="start" [name]="p.icon + '-outline'"></ion-icon>
-              <ion-label>{{ p.title }}</ion-label>
-            </ion-item>
-          </ion-menu-toggle>
-        </ion-list>
+          <ion-icon name="chevron-forward-outline" class="info-arrow"></ion-icon>
+        </div>
 
-        <!-- Cerrar sesión -->
-        <ion-list class="logout-section">
-          <ion-menu-toggle auto-hide="false">
-            <ion-item button (click)="logout()" lines="none" detail="false">
-              <ion-icon aria-hidden="true" slot="start" name="log-out-outline"></ion-icon>
-              <ion-label>Cerrar Sesión</ion-label>
-            </ion-item>
-          </ion-menu-toggle>
-        </ion-list>
+        <!-- Navegación organizada por secciones -->
+        <div class="menu-navigation">
+          <ion-accordion-group *ngFor="let section of getVisibleMenuSections()">
+            
+            <!-- Header de sección -->
+            <div class="section-header">
+              <ion-icon 
+                [name]="section.icon" 
+                [color]="getSectionIconColor(section)">
+              </ion-icon>
+              <span class="section-title">{{ section.title }}</span>
+            </div>
+            
+            <!-- Items de la sección -->
+            <ion-list class="section-list">
+              <ion-menu-toggle 
+                auto-hide="false" 
+                *ngFor="let page of section.pages">
+                <ion-item 
+                  button
+                  (click)="navigateToPage(page.url)"
+                  [routerLink]="[page.url]"
+                  routerLinkActive="selected"
+                  lines="none" 
+                  detail="false"
+                  class="menu-item">
+                  
+                  <ion-icon 
+                    [name]="page.icon + '-outline'" 
+                    slot="start"
+                    [color]="page.color || 'medium'">
+                  </ion-icon>
+                  
+                  <ion-label>{{ page.title }}</ion-label>
+                  
+                  <!-- Badge opcional -->
+                  <ion-badge 
+                    *ngIf="page.badge" 
+                    color="danger" 
+                    slot="end">
+                    {{ page.badge }}
+                  </ion-badge>
+                  
+                  <!-- Indicador de admin -->
+                  <ion-icon 
+                    *ngIf="section.adminOnly"
+                    name="shield-checkmark-outline" 
+                    color="warning"
+                    slot="end"
+                    class="admin-indicator">
+                  </ion-icon>
+                </ion-item>
+              </ion-menu-toggle>
+            </ion-list>
+          </ion-accordion-group>
+        </div>
+
+        <!-- Sección de configuración y logout -->
+        <div class="menu-footer">
+          <ion-list>
+            <ion-list-header>
+              <ion-label class="footer-header">Configuración</ion-label>
+            </ion-list-header>
+            
+            <ion-menu-toggle auto-hide="false">
+              <ion-item 
+                button 
+                routerLink="/configuracion"
+                routerLinkActive="selected"
+                lines="none" 
+                detail="false"
+                class="menu-item">
+                <ion-icon name="settings-outline" slot="start" color="medium"></ion-icon>
+                <ion-label>Configuración</ion-label>
+              </ion-item>
+            </ion-menu-toggle>
+            
+            <ion-menu-toggle auto-hide="false">
+              <ion-item 
+                button 
+                routerLink="/notificaciones"
+                routerLinkActive="selected"
+                lines="none" 
+                detail="false"
+                class="menu-item">
+                <ion-icon name="notifications-outline" slot="start" color="medium"></ion-icon>
+                <ion-label>Notificaciones</ion-label>
+                <ion-badge color="primary" slot="end">3</ion-badge>
+              </ion-item>
+            </ion-menu-toggle>
+          </ion-list>
+          
+          <!-- Botón de logout -->
+          <div class="logout-section">
+            <ion-menu-toggle auto-hide="false">
+              <ion-item 
+                button 
+                (click)="logout()" 
+                lines="none" 
+                detail="false"
+                class="logout-item">
+                <ion-icon name="log-out-outline" slot="start" color="danger"></ion-icon>
+                <ion-label color="danger">Cerrar Sesión</ion-label>
+              </ion-item>
+            </ion-menu-toggle>
+          </div>
+          
+          <!-- Información de la app -->
+          <div class="app-info">
+            <p class="app-version">PizzApp v1.0.0</p>
+            <p class="app-copyright">© 2024 PizzApp</p>
+          </div>
+        </div>
       </ion-content>
     </ion-menu>
 

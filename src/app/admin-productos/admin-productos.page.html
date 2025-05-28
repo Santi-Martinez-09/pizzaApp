@@ -1,13 +1,377 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>adminProductos</ion-title>
+  <ion-toolbar color="secondary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>🛠️ Admin Productos</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="addNewProduct()">
+        <ion-icon name="add-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">adminProductos</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  
+  <!-- Refresher -->
+  <ion-refresher slot="fixed" (ionRefresh)="refreshData($event)">
+    <ion-refresher-content
+      pullingIcon="refresh-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando datos...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Header administrativo -->
+  <div class="admin-header">
+    <div class="welcome-admin">
+      <h1>Panel de Productos</h1>
+      <p>Gestiona tu inventario y precios</p>
+    </div>
+    
+    <!-- Estadísticas rápidas -->
+    <div class="quick-stats">
+      <div class="stat-card">
+        <ion-icon name="pizza-outline" color="primary"></ion-icon>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.totalPizzas }}</span>
+          <span class="stat-label">Pizzas</span>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <ion-icon name="cafe-outline" color="tertiary"></ion-icon>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.totalBebidas }}</span>
+          <span class="stat-label">Bebidas</span>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <ion-icon name="checkmark-circle-outline" color="success"></ion-icon>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.pizzasDisponibles + stats.bebidasDisponibles }}</span>
+          <span class="stat-label">Disponibles</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+  <div class="search-section">
+    <ion-searchbar
+      [(ngModel)]="searchTerm"
+      (ionInput)="onSearchChange($event)"
+      placeholder="Buscar productos..."
+      show-clear-button="focus"
+      debounce="300">
+    </ion-searchbar>
+  </div>
+
+  <!-- Segmento de navegación -->
+  <div class="segment-container">
+    <ion-segment [(ngModel)]="selectedSegment" (ionChange)="onSegmentChange($event)" color="secondary">
+      <ion-segment-button value="pizzas">
+        <ion-icon name="pizza-outline"></ion-icon>
+        <ion-label>Pizzas ({{ filteredPizzas.length }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="bebidas">
+        <ion-icon name="cafe-outline"></ion-icon>
+        <ion-label>Bebidas ({{ filteredBebidas.length }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="estadisticas">
+        <ion-icon name="stats-chart-outline"></ion-icon>
+        <ion-label>Estadísticas</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="admin-content">
+
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="loading-container">
+      <ion-spinner name="crescent" color="secondary"></ion-spinner>
+      <p>Cargando productos...</p>
+    </div>
+
+    <!-- Sección: Pizzas -->
+    <div *ngIf="selectedSegment === 'pizzas' && !isLoading" class="products-section">
+      
+      <!-- Sin resultados -->
+      <div *ngIf="filteredPizzas.length === 0" class="no-results">
+        <ion-icon name="pizza-outline" class="no-results-icon"></ion-icon>
+        <h3>No se encontraron pizzas</h3>
+        <p *ngIf="searchTerm">Intenta con otros términos de búsqueda</p>
+        <p *ngIf="!searchTerm">Aún no hay pizzas en el menú</p>
+        <ion-button (click)="addNewProduct()" expand="block" fill="outline" class="add-first-btn">
+          <ion-icon name="add-outline" slot="start"></ion-icon>
+          Agregar primera pizza
+        </ion-button>
+      </div>
+
+      <!-- Lista de pizzas -->
+      <ion-grid *ngIf="filteredPizzas.length > 0">
+        <ion-row>
+          <ion-col size="12" size-md="6" size-lg="4" *ngFor="let pizza of filteredPizzas; trackBy: trackByProductId">
+            <ion-card class="product-card">
+              
+              <!-- Header de la carta -->
+              <div class="card-header">
+                <div class="product-image">
+                  <img [src]="pizza.imagen || 'assets/images/pizza-default.jpg'" [alt]="pizza.nombre">
+                  <div class="status-overlay" [class]="'status-' + (pizza.disponible ? 'available' : 'unavailable')">
+                    <ion-chip [color]="getStatusColor(pizza.disponible)" class="status-chip">
+                      <ion-icon [name]="pizza.disponible ? 'checkmark-circle-outline' : 'close-circle-outline'"></ion-icon>
+                      <ion-label>{{ getStatusText(pizza.disponible) }}</ion-label>
+                    </ion-chip>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contenido -->
+              <ion-card-header>
+                <div class="product-header">
+                  <ion-card-title>{{ pizza.nombre }}</ion-card-title>
+                  <div class="product-badges">
+                    <ion-chip color="primary" outline="true">
+                      {{ getCategoryIcon(pizza.categoria) }} {{ pizza.categoria }}
+                    </ion-chip>
+                    <ion-chip color="medium" outline="true">
+                      {{ pizza.tamano }}
+                    </ion-chip>
+                  </div>
+                </div>
+              </ion-card-header>
+
+              <ion-card-content>
+                <p class="product-description">{{ pizza.descripcion }}</p>
+                
+                <!-- Ingredientes -->
+                <div class="ingredients-section" *ngIf="pizza.ingredientes.length > 0">
+                  <strong>Ingredientes:</strong>
+                  <p class="ingredients-text">{{ pizza.ingredientes.join(', ') }}</p>
+                </div>
+
+                <!-- Precio -->
+                <div class="price-section">
+                  <span class="price">{{ formatPrice(pizza.precio) }}</span>
+                </div>
+
+                <!-- Acciones -->
+                <div class="action-buttons">
+                  <ion-button 
+                    fill="clear" 
+                    size="small"
+                    (click)="toggleProductAvailability(pizza, 'pizza')"
+                    [color]="pizza.disponible ? 'danger' : 'success'">
+                    <ion-icon 
+                      [name]="pizza.disponible ? 'eye-off-outline' : 'eye-outline'" 
+                      slot="start">
+                    </ion-icon>
+                    {{ pizza.disponible ? 'Ocultar' : 'Mostrar' }}
+                  </ion-button>
+                  
+                  <ion-button fill="clear" size="small" color="primary">
+                    <ion-icon name="create-outline" slot="start"></ion-icon>
+                    Editar
+                  </ion-button>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    color="danger"
+                    (click)="deleteProduct(pizza, 'pizza')">
+                    <ion-icon name="trash-outline" slot="start"></ion-icon>
+                    Eliminar
+                  </ion-button>
+                </div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </div>
+
+    <!-- Sección: Bebidas -->
+    <div *ngIf="selectedSegment === 'bebidas' && !isLoading" class="products-section">
+      
+      <!-- Sin resultados -->
+      <div *ngIf="filteredBebidas.length === 0" class="no-results">
+        <ion-icon name="cafe-outline" class="no-results-icon"></ion-icon>
+        <h3>No se encontraron bebidas</h3>
+        <p *ngIf="searchTerm">Intenta con otros términos de búsqueda</p>
+        <p *ngIf="!searchTerm">Aún no hay bebidas en el menú</p>
+        <ion-button (click)="addNewProduct()" expand="block" fill="outline" class="add-first-btn">
+          <ion-icon name="add-outline" slot="start"></ion-icon>
+          Agregar primera bebida
+        </ion-button>
+      </div>
+
+      <!-- Lista de bebidas -->
+      <ion-grid *ngIf="filteredBebidas.length > 0">
+        <ion-row>
+          <ion-col size="12" size-md="6" size-lg="3" *ngFor="let bebida of filteredBebidas; trackBy: trackByProductId">
+            <ion-card class="product-card bebida-card">
+              
+              <!-- Header de la carta -->
+              <div class="card-header">
+                <div class="product-image">
+                  <img [src]="bebida.imagen || 'assets/images/bebida-default.jpg'" [alt]="bebida.nombre">
+                  <div class="status-overlay" [class]="'status-' + (bebida.disponible ? 'available' : 'unavailable')">
+                    <ion-chip [color]="getStatusColor(bebida.disponible)" class="status-chip">
+                      <ion-icon [name]="bebida.disponible ? 'checkmark-circle-outline' : 'close-circle-outline'"></ion-icon>
+                    </ion-chip>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contenido -->
+              <ion-card-header>
+                <ion-card-title>{{ bebida.nombre }}</ion-card-title>
+                <ion-chip color="medium" outline="true">
+                  {{ bebida.tamano }}
+                </ion-chip>
+              </ion-card-header>
+
+              <ion-card-content>
+                <!-- Precio -->
+                <div class="price-section">
+                  <span class="price">{{ formatPrice(bebida.precio) }}</span>
+                </div>
+
+                <!-- Acciones -->
+                <div class="action-buttons">
+                  <ion-button 
+                    fill="clear" 
+                    size="small"
+                    (click)="toggleProductAvailability(bebida, 'bebida')"
+                    [color]="bebida.disponible ? 'danger' : 'success'">
+                    <ion-icon 
+                      [name]="bebida.disponible ? 'eye-off-outline' : 'eye-outline'">
+                    </ion-icon>
+                  </ion-button>
+                  
+                  <ion-button fill="clear" size="small" color="primary">
+                    <ion-icon name="create-outline"></ion-icon>
+                  </ion-button>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    color="danger"
+                    (click)="deleteProduct(bebida, 'bebida')">
+                    <ion-icon name="trash-outline"></ion-icon>
+                  </ion-button>
+                </div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </div>
+
+    <!-- Sección: Estadísticas -->
+    <div *ngIf="selectedSegment === 'estadisticas' && !isLoading" class="stats-section">
+      
+      <ion-card class="stats-overview">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="stats-chart-outline"></ion-icon>
+            Resumen del Inventario
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <div class="stats-grid">
+            
+            <div class="detailed-stat">
+              <div class="stat-icon">
+                <ion-icon name="pizza-outline" color="primary"></ion-icon>
+              </div>
+              <div class="stat-details">
+                <h3>{{ stats.totalPizzas }}</h3>
+                <p>Total de pizzas</p>
+                <div class="stat-breakdown">
+                  <span class="available">{{ stats.pizzasDisponibles }} disponibles</span>
+                  <span class="unavailable">{{ stats.totalPizzas - stats.pizzasDisponibles }} ocultas</span>
+                </div>
+              </div>
+              <div class="stat-action">
+                <span class="avg-price">{{ formatPrice(stats.precioPromedioPizza) }}</span>
+                <small>Precio promedio</small>
+              </div>
+            </div>
+            
+            <div class="detailed-stat">
+              <div class="stat-icon">
+                <ion-icon name="cafe-outline" color="tertiary"></ion-icon>
+              </div>
+              <div class="stat-details">
+                <h3>{{ stats.totalBebidas }}</h3>
+                <p>Total de bebidas</p>
+                <div class="stat-breakdown">
+                  <span class="available">{{ stats.bebidasDisponibles }} disponibles</span>
+                  <span class="unavailable">{{ stats.totalBebidas - stats.bebidasDisponibles }} ocultas</span>
+                </div>
+              </div>
+              <div class="stat-action">
+                <span class="avg-price">{{ formatPrice(stats.precioPromedioBebida) }}</span>
+                <small>Precio promedio</small>
+              </div>
+            </div>
+            
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Acciones rápidas -->
+      <ion-card class="quick-actions">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="flash-outline"></ion-icon>
+            Acciones Rápidas
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <ion-list>
+            <ion-item button (click)="addNewProduct()">
+              <ion-icon name="add-circle-outline" slot="start" color="success"></ion-icon>
+              <ion-label>
+                <h3>Agregar nuevo producto</h3>
+                <p>Expandir el menú con nuevas opciones</p>
+              </ion-label>
+            </ion-item>
+            
+            <ion-item button>
+              <ion-icon name="sync-outline" slot="start" color="primary"></ion-icon>
+              <ion-label>
+                <h3>Sincronizar inventario</h3>
+                <p>Actualizar disponibilidad masiva</p>
+              </ion-label>
+            </ion-item>
+            
+            <ion-item button>
+              <ion-icon name="document-text-outline" slot="start" color="secondary"></ion-icon>
+              <ion-label>
+                <h3>Exportar catálogo</h3>
+                <p>Descargar lista de productos</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- FAB para agregar producto -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end" *ngIf="selectedSegment !== 'estadisticas'">
+    <ion-fab-button (click)="addNewProduct()" color="secondary">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
 </ion-content>

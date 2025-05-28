@@ -1,58 +1,240 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
+  <ion-toolbar color="primary">
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/login"></ion-back-button>
     </ion-buttons>
-    <ion-title>Registro</ion-title>
+    <ion-title>📝 Crear Cuenta</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Registro</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
+  
   <div class="register-container">
-    <ion-card>
+    
+    <!-- Header de bienvenida -->
+    <div class="welcome-header">
+      <div class="logo-section">
+        <div class="app-logo">🍕</div>
+        <h1>¡Únete a PizzaApp!</h1>
+        <p>Crea tu cuenta y disfruta las mejores pizzas</p>
+      </div>
+    </div>
+
+    <!-- Formulario de registro -->
+    <ion-card class="register-card">
       <ion-card-header>
-        <ion-card-title>Crear cuenta</ion-card-title>
+        <ion-card-title>
+          <ion-icon name="person-outline"></ion-icon>
+          Información Personal
+        </ion-card-title>
       </ion-card-header>
       
       <ion-card-content>
-        <form (ngSubmit)="register()" #registerForm="ngForm">
-          <ion-item>
-            <ion-label position="floating">Nombre</ion-label>
-            <ion-input type="text" [(ngModel)]="name" name="name" required></ion-input>
-          </ion-item>
+        <form [formGroup]="registerForm" (ngSubmit)="register()">
           
-          <ion-item>
-            <ion-label position="floating">Correo electrónico</ion-label>
-            <ion-input type="email" [(ngModel)]="email" name="email" required></ion-input>
-          </ion-item>
+          <!-- Nombres -->
+          <div class="name-row">
+            <ion-item 
+              class="name-field"
+              [class.error]="hasFieldError('firstName')"
+              fill="outline">
+              <ion-label position="floating">
+                <ion-icon name="person-outline"></ion-icon>
+                Nombre *
+              </ion-label>
+              <ion-input 
+                type="text" 
+                formControlName="firstName"
+                placeholder="Tu nombre">
+              </ion-input>
+            </ion-item>
+            
+            <ion-item 
+              class="name-field"
+              [class.error]="hasFieldError('lastName')"
+              fill="outline">
+              <ion-label position="floating">
+                <ion-icon name="person-outline"></ion-icon>
+                Apellido *
+              </ion-label>
+              <ion-input 
+                type="text" 
+                formControlName="lastName"
+                placeholder="Tu apellido">
+              </ion-input>
+            </ion-item>
+          </div>
           
-          <ion-item>
-            <ion-label position="floating">Contraseña</ion-label>
-            <ion-input type="password" [(ngModel)]="password" name="password" required minlength="6"></ion-input>
-            <ion-note slot="helper">Mínimo 6 caracteres</ion-note>
-          </ion-item>
+          <!-- Errores de nombres -->
+          <div class="error-messages">
+            <ion-text color="danger" *ngIf="hasFieldError('firstName')">
+              <small>{{ getFieldError('firstName') }}</small>
+            </ion-text>
+            <ion-text color="danger" *ngIf="hasFieldError('lastName')">
+              <small>{{ getFieldError('lastName') }}</small>
+            </ion-text>
+          </div>
           
-          <ion-item>
-            <ion-label position="floating">Confirmar contraseña</ion-label>
-            <ion-input type="password" [(ngModel)]="confirmPassword" name="confirmPassword" required></ion-input>
+          <!-- Email -->
+          <ion-item 
+            [class.error]="hasFieldError('email')"
+            fill="outline">
+            <ion-label position="floating">
+              <ion-icon name="mail-outline"></ion-icon>
+              Correo electrónico *
+            </ion-label>
+            <ion-input 
+              type="email" 
+              formControlName="email"
+              placeholder="tu@email.com">
+            </ion-input>
           </ion-item>
+          <ion-text color="danger" *ngIf="hasFieldError('email')">
+            <small>{{ getFieldError('email') }}</small>
+          </ion-text>
           
-          <ion-button expand="block" type="submit" [disabled]="!registerForm.valid || password !== confirmPassword" class="ion-margin-top">
-            Registrarse
+          <!-- Teléfono (opcional) -->
+          <ion-item 
+            [class.error]="hasFieldError('phone')"
+            fill="outline">
+            <ion-label position="floating">
+              <ion-icon name="call-outline"></ion-icon>
+              Teléfono (opcional)
+            </ion-label>
+            <ion-input 
+              type="tel" 
+              formControlName="phone"
+              placeholder="3001234567">
+            </ion-input>
+          </ion-item>
+          <ion-text color="danger" *ngIf="hasFieldError('phone')">
+            <small>{{ getFieldError('phone') }}</small>
+          </ion-text>
+          
+          <!-- Contraseña -->
+          <ion-item 
+            [class.error]="hasFieldError('password')"
+            fill="outline">
+            <ion-label position="floating">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+              Contraseña *
+            </ion-label>
+            <ion-input 
+              [type]="showPassword ? 'text' : 'password'" 
+              formControlName="password"
+              placeholder="Mínimo 6 caracteres">
+            </ion-input>
+            <ion-button 
+              fill="clear" 
+              slot="end"
+              (click)="togglePasswordVisibility('password')">
+              <ion-icon 
+                [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"
+                color="medium">
+              </ion-icon>
+            </ion-button>
+          </ion-item>
+          <ion-text color="danger" *ngIf="hasFieldError('password')">
+            <small>{{ getFieldError('password') }}</small>
+          </ion-text>
+          
+          <!-- Confirmar contraseña -->
+          <ion-item 
+            [class.error]="hasFieldError('confirmPassword')"
+            fill="outline">
+            <ion-label position="floating">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+              Confirmar contraseña *
+            </ion-label>
+            <ion-input 
+              [type]="showConfirmPassword ? 'text' : 'password'" 
+              formControlName="confirmPassword"
+              placeholder="Repite tu contraseña">
+            </ion-input>
+            <ion-button 
+              fill="clear" 
+              slot="end"
+              (click)="togglePasswordVisibility('confirmPassword')">
+              <ion-icon 
+                [name]="showConfirmPassword ? 'eye-off-outline' : 'eye-outline'"
+                color="medium">
+              </ion-icon>
+            </ion-button>
+          </ion-item>
+          <ion-text color="danger" *ngIf="hasFieldError('confirmPassword')">
+            <small>{{ getFieldError('confirmPassword') }}</small>
+          </ion-text>
+          
+          <!-- Términos y condiciones -->
+          <div class="terms-section">
+            <ion-item lines="none">
+              <ion-checkbox 
+                slot="start" 
+                [(ngModel)]="acceptTerms"
+                [ngModelOptions]="{standalone: true}">
+              </ion-checkbox>
+              <ion-label class="terms-label">
+                <span>Acepto los </span>
+                <a (click)="showTerms()" class="terms-link">términos y condiciones</a>
+                <span> de PizzaApp</span>
+              </ion-label>
+            </ion-item>
+          </div>
+          
+          <!-- Botón de registro -->
+          <ion-button 
+            expand="block" 
+            type="submit" 
+            [disabled]="!registerForm.valid || !acceptTerms" 
+            class="register-btn">
+            <ion-icon name="person-outline" slot="start"></ion-icon>
+            Crear mi cuenta
           </ion-button>
         </form>
         
+        <!-- Separador -->
+        <div class="divider">
+          <hr>
+          <span>o regístrate con</span>
+          <hr>
+        </div>
         
-        <div class="login-link ion-text-center ion-margin-top">
-          <p>¿Ya tienes una cuenta? <a (click)="goToLogin()">Iniciar sesión</a></p>
+        <!-- Registro con Google -->
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          (click)="registerWithGoogle()"
+          class="google-btn">
+          <ion-icon name="logo-google" slot="start"></ion-icon>
+          Continuar con Google
+        </ion-button>
+        
+        <!-- Link al login -->
+        <div class="login-link">
+          <p>
+            ¿Ya tienes una cuenta? 
+            <a (click)="goToLogin()">Iniciar sesión</a>
+          </p>
         </div>
       </ion-card-content>
     </ion-card>
+    
+    <!-- Información adicional -->
+    <div class="info-section">
+      <ion-card color="light">
+        <ion-card-content>
+          <div class="benefits">
+            <h3>🎉 Beneficios de tener cuenta</h3>
+            <ul>
+              <li>🍕 Guarda tus pizzas favoritas</li>
+              <li>📦 Rastrea tus pedidos en tiempo real</li>
+              <li>💳 Checkout rápido y seguro</li>
+              <li>🎁 Ofertas y descuentos exclusivos</li>
+              <li>📱 Notificaciones de estado</li>
+            </ul>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
   </div>
 </ion-content>

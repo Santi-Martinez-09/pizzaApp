@@ -1,13 +1,408 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>perfil</ion-title>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>👤 Mi Perfil</ion-title>
+    <ion-buttons slot="end" *ngIf="selectedSegment === 'perfil'">
+      <ion-button fill="clear" (click)="toggleEdit()" *ngIf="!isEditing">
+        <ion-icon name="create-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" (click)="toggleEdit()" *ngIf="isEditing">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">perfil</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  
+  <!-- Header del perfil -->
+  <div class="profile-header" *ngIf="userProfile">
+    <div class="avatar-section">
+      <div class="avatar-container" (click)="changeProfilePicture()">
+        <ion-avatar *ngIf="userProfile?.profileImage; else initials" class="profile-avatar">
+          <img [src]="userProfile.profileImage" [alt]="userProfile?.displayName || 'Usuario'">
+        </ion-avatar>
+        <ng-template #initials>
+          <div class="avatar-initials">
+            {{ getUserInitials() }}
+          </div>
+        </ng-template>
+        <div class="avatar-overlay">
+          <ion-icon name="camera-outline"></ion-icon>
+        </div>
+      </div>
+      
+      <div class="profile-info">
+        <h2 class="profile-name">{{ userProfile?.displayName || 'Usuario' }}</h2>
+        <p class="profile-email">{{ userProfile?.email || '' }}</p>
+        
+        <ion-chip [color]="getRoleColor()" class="role-chip" *ngIf="userProfile?.role">
+          <ion-icon 
+            [name]="userProfile.role === 'admin' ? 'shield-checkmark-outline' : 'person-outline'"
+            slot="start">
+          </ion-icon>
+          <ion-label>{{ getRoleDisplayName() }}</ion-label>
+        </ion-chip>
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="quick-stats" *ngIf="userProfile?.stats">
+      <div class="stat-item">
+        <ion-icon name="receipt-outline" color="primary"></ion-icon>
+       <span class="stat-number">{{ userProfile?.stats?.totalOrders || 0 }}</span>
+        <span class="stat-label">Pedidos</span>
+      </div>
+      <div class="stat-item">
+        <ion-icon name="card-outline" color="success"></ion-icon>
+        <span class="stat-number">{{ formatPrice(userProfile?.stats?.totalSpent || 0) }}</span>
+        <span class="stat-label">Gastado</span>
+      </div>
+      <div class="stat-item">
+        <ion-icon name="time-outline" color="secondary"></ion-icon>
+        <span class="stat-number">{{ formatDate(userProfile.createdAt) }}</span>
+        <span class="stat-label">Miembro desde</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segmento de navegación -->
+  <div class="segment-container">
+    <ion-segment [(ngModel)]="selectedSegment" (ionChange)="onSegmentChange($event)" color="primary">
+      <ion-segment-button value="perfil">
+        <ion-icon name="person-outline"></ion-icon>
+        <ion-label>Perfil</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="estadisticas">
+        <ion-icon name="stats-chart-outline"></ion-icon>
+        <ion-label>Estadísticas</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="configuracion">
+        <ion-icon name="settings-outline"></ion-icon>
+        <ion-label>Configuración</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Contenido del perfil -->
+  <div class="profile-content">
+
+    <!-- Sección: Información Personal -->
+    <div *ngIf="selectedSegment === 'perfil'" class="profile-section">
+      
+      <!-- Información básica -->
+      <ion-card class="info-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="person-outline"></ion-icon>
+            Información Personal
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+            
+            <!-- Nombres -->
+            <div class="name-row">
+              <ion-item 
+                class="name-field"
+                [class.error]="hasFieldError('firstName')"
+                fill="outline">
+                <ion-label position="floating">Nombre</ion-label>
+                <ion-input 
+                  type="text" 
+                  formControlName="firstName"
+                  [readonly]="!isEditing">
+                </ion-input>
+              </ion-item>
+              
+              <ion-item 
+                class="name-field"
+                [class.error]="hasFieldError('lastName')"
+                fill="outline">
+                <ion-label position="floating">Apellido</ion-label>
+                <ion-input 
+                  type="text" 
+                  formControlName="lastName"
+                  [readonly]="!isEditing">
+                </ion-input>
+              </ion-item>
+            </div>
+            
+            <!-- Errores de nombres -->
+            <div class="error-messages" *ngIf="isEditing">
+              <ion-text color="danger" *ngIf="hasFieldError('firstName')">
+                <small>{{ getFieldError('firstName') }}</small>
+              </ion-text>
+              <ion-text color="danger" *ngIf="hasFieldError('lastName')">
+                <small>{{ getFieldError('lastName') }}</small>
+              </ion-text>
+            </div>
+            
+            <!-- Email (readonly) -->
+            <ion-item fill="outline" class="readonly-field">
+              <ion-label position="floating">Correo electrónico</ion-label>
+              <ion-input 
+                type="email" 
+                [value]="userProfile?.email || ''"
+                readonly>
+              </ion-input>
+              <ion-note slot="helper">El correo no se puede modificar</ion-note>
+            </ion-item>
+            
+            <!-- Teléfono -->
+            <ion-item 
+              [class.error]="hasFieldError('phone')"
+              fill="outline">
+              <ion-label position="floating">Teléfono</ion-label>
+              <ion-input 
+                type="tel" 
+                formControlName="phone"
+                [readonly]="!isEditing"
+                placeholder="3001234567">
+              </ion-input>
+            </ion-item>
+            <ion-text color="danger" *ngIf="isEditing && hasFieldError('phone')">
+              <small>{{ getFieldError('phone') }}</small>
+            </ion-text>
+            
+            <!-- Dirección -->
+            <ion-item fill="outline">
+              <ion-label position="floating">Dirección</ion-label>
+              <ion-input 
+                type="text" 
+                formControlName="address"
+                [readonly]="!isEditing"
+                placeholder="Tu dirección de entrega">
+              </ion-input>
+            </ion-item>
+            
+            <!-- Botones de acción -->
+            <div class="action-buttons" *ngIf="isEditing">
+              <ion-button 
+                type="submit" 
+                expand="block"
+                [disabled]="!profileForm.valid"
+                class="save-btn">
+                <ion-icon name="save-outline" slot="start"></ion-icon>
+                Guardar cambios
+              </ion-button>
+            </div>
+          </form>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Información de cuenta -->
+      <ion-card class="account-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="information-circle-outline"></ion-icon>
+            Información de la Cuenta
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <ion-list>
+            <ion-item *ngIf="userProfile">
+              <ion-icon name="calendar-outline" slot="start" color="primary"></ion-icon>
+              <ion-label>
+                <h3>Fecha de registro</h3>
+                <p>{{ formatDate(userProfile.createdAt) }}</p>
+              </ion-label>
+            </ion-item>
+            
+            <ion-item *ngIf="userProfile">
+              <ion-icon name="time-outline" slot="start" color="secondary"></ion-icon>
+              <ion-label>
+                <h3>Último acceso</h3>
+                <p>{{ formatDate(userProfile.lastLogin) }}</p>
+              </ion-label>
+            </ion-item>
+            
+            <ion-item *ngIf="userProfile">
+              <ion-icon name="checkmark-circle-outline" slot="start" color="success"></ion-icon>
+              <ion-label>
+                <h3>Estado de la cuenta</h3>
+                <p>{{ userProfile.isActive ? 'Activa' : 'Inactiva' }}</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- Sección: Estadísticas -->
+    <div *ngIf="selectedSegment === 'estadisticas'" class="stats-section">
+      
+      <ion-card class="stats-card" *ngIf="userProfile?.stats">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="stats-chart-outline"></ion-icon>
+            Mis Estadísticas
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">
+                <ion-icon name="receipt-outline" color="primary"></ion-icon>
+              </div>
+              <div class="stat-content">
+                <h3>{{ userProfile?.stats?.totalOrders || 0 }}</h3>
+                <p>Pedidos realizados</p>
+              </div>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-icon">
+                <ion-icon name="card-outline" color="success"></ion-icon>
+              </div>
+              <div class="stat-content">
+                <h3>{{ formatPrice(userProfile?.stats?.totalSpent || 0) }}</h3>
+                <p>Total gastado</p>
+              </div>
+            </div>
+            
+            <div class="stat-card" *ngIf="userProfile?.stats?.favoriteCategory">
+              <div class="stat-icon">
+                <ion-icon name="heart-outline" color="danger"></ion-icon>
+              </div>
+              <div class="stat-content">
+                <h3>{{ userProfile?.stats?.favoriteCategory }}</h3>
+                <p>Categoría favorita</p>
+              </div>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-icon">
+                <ion-icon name="trending-up-outline" color="warning"></ion-icon>
+              </div>
+              <div class="stat-content">
+                <h3>{{ formatPrice((userProfile?.stats?.totalSpent || 0) / (userProfile?.stats?.totalOrders || 1)) }}</h3>
+                <p>Promedio por pedido</p>
+              </div>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Mensaje si no hay estadísticas -->
+      <div *ngIf="!userProfile?.stats || (userProfile?.stats?.totalOrders || 0) === 0" class="no-stats">
+        <ion-icon name="stats-chart-outline" class="no-stats-icon"></ion-icon>
+        <h3>Aún no tienes estadísticas</h3>
+        <p>Realiza tu primer pedido para ver tus estadísticas aquí</p>
+        <ion-button routerLink="/home" expand="block" fill="outline">
+          <ion-icon name="add-outline" slot="start"></ion-icon>
+          Hacer mi primer pedido
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Sección: Configuración -->
+    <div *ngIf="selectedSegment === 'configuracion'" class="config-section">
+      
+      <!-- Preferencias -->
+      <ion-card class="preferences-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="notifications-outline"></ion-icon>
+            Preferencias
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <form [formGroup]="preferencesForm">
+            <ion-list>
+              <ion-item>
+                <ion-icon name="notifications-outline" slot="start" color="primary"></ion-icon>
+                <ion-label>
+                  <h3>Notificaciones push</h3>
+                  <p>Recibir notificaciones sobre pedidos</p>
+                </ion-label>
+                <ion-toggle formControlName="notifications" slot="end"></ion-toggle>
+              </ion-item>
+              
+              <ion-item>
+                <ion-icon name="mail-outline" slot="start" color="secondary"></ion-icon>
+                <ion-label>
+                  <h3>Newsletter</h3>
+                  <p>Recibir ofertas y promociones</p>
+                </ion-label>
+                <ion-toggle formControlName="newsletter" slot="end"></ion-toggle>
+              </ion-item>
+              
+              <ion-item>
+                <ion-icon name="color-palette-outline" slot="start" color="tertiary"></ion-icon>
+                <ion-label>Tema de la aplicación</ion-label>
+                <ion-select formControlName="theme" interface="popover">
+                  <ion-select-option value="light">Claro</ion-select-option>
+                  <ion-select-option value="dark">Oscuro</ion-select-option>
+                  <ion-select-option value="auto">Automático</ion-select-option>
+                </ion-select>
+              </ion-item>
+            </ion-list>
+            
+            <ion-button 
+              expand="block" 
+              (click)="savePreferences()"
+              class="save-preferences-btn">
+              <ion-icon name="save-outline" slot="start"></ion-icon>
+              Guardar preferencias
+            </ion-button>
+          </form>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Seguridad -->
+      <ion-card class="security-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="lock-closed-outline"></ion-icon>
+            Seguridad
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <ion-list>
+            <ion-item button (click)="changePassword()">
+              <ion-icon name="key-outline" slot="start" color="warning"></ion-icon>
+              <ion-label>
+                <h3>Cambiar contraseña</h3>
+                <p>Actualizar tu contraseña de acceso</p>
+              </ion-label>
+              <ion-icon name="chevron-forward-outline" slot="end"></ion-icon>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Zona peligrosa -->
+      <ion-card class="danger-zone">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="warning-outline"></ion-icon>
+            Zona de peligro
+          </ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <p class="danger-warning">
+            Las acciones en esta sección son irreversibles. Procede con precaución.
+          </p>
+          
+          <ion-button 
+            expand="block" 
+            fill="outline"
+            color="danger"
+            (click)="deactivateAccount()">
+            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+            Desactivar cuenta
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
 </ion-content>

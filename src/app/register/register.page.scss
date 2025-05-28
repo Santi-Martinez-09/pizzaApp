@@ -1,44 +1,463 @@
+// Main Container
 .register-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+// Welcome Header
+.welcome-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  
+  .logo-section {
+    .app-logo {
+      font-size: 4rem;
+      margin-bottom: 0.5rem;
+    }
     
-    ion-card {
-      width: 100%;
-      max-width: 400px;
+    h1 {
+      color: var(--ion-color-primary);
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    
+    p {
+      color: var(--ion-color-medium);
+      font-size: 1rem;
+      margin: 0;
+    }
+  }
+}
+
+// Register Card
+.register-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--ion-color-step-100);
+  
+  ion-card-header {
+    background: linear-gradient(135deg, var(--ion-color-primary-tint), var(--ion-color-secondary-tint));
+    border-radius: 16px 16px 0 0;
+    
+    ion-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--ion-color-primary-contrast);
+      font-weight: 600;
+      
+      ion-icon {
+        font-size: 1.2rem;
+      }
     }
   }
   
-  .social-register {
-    margin-top: 20px;
+  ion-card-content {
+    padding: 1.5rem;
+  }
+}
+
+// Form Styles
+form {
+  .name-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    
+    .name-field {
+      flex: 1;
+    }
   }
   
-  .login-link {
-    margin-top: 16px;
+  ion-item {
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    --border-radius: 12px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --inner-padding-end: 8px;
+    
+    &.error {
+      --border-color: var(--ion-color-danger);
+      --highlight-color-focused: var(--ion-color-danger);
+    }
+    
+    ion-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      
+      ion-icon {
+        font-size: 1rem;
+        color: var(--ion-color-primary);
+      }
+    }
+    
+    ion-input {
+      --placeholder-color: var(--ion-color-medium);
+    }
+  }
+  
+  .error-messages {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    
+    ion-text {
+      flex: 1;
+      
+      &:first-child {
+        margin-right: 0.25rem;
+      }
+      
+      &:last-child {
+        margin-left: 0.25rem;
+      }
+    }
+  }
+  
+  ion-text {
+    small {
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+  }
+}
+
+// Terms Section
+.terms-section {
+  margin: 1.5rem 0;
+  
+  ion-item {
+    --background: transparent;
+    --padding-start: 0;
+    margin-bottom: 0;
+  }
+  
+  .terms-label {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    
+    .terms-link {
+      color: var(--ion-color-primary);
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 600;
+      
+      &:hover {
+        color: var(--ion-color-primary-shade);
+      }
+    }
+  }
+}
+
+// Buttons
+.register-btn {
+  --border-radius: 25px;
+  font-weight: 600;
+  height: 48px;
+  margin: 1.5rem 0 1rem 0;
+  
+  &[disabled] {
+    opacity: 0.5;
+  }
+}
+
+.google-btn {
+  --border-radius: 25px;
+  --border-width: 2px;
+  --border-color: var(--ion-color-medium);
+  --color: var(--ion-color-dark);
+  font-weight: 600;
+  height: 48px;
+  
+  ion-icon {
+    color: #db4437;
+  }
+  
+  &:hover {
+    --border-color: var(--ion-color-primary);
+    --color: var(--ion-color-primary);
+  }
+}
+
+// Divider
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: var(--ion-color-medium);
+  font-weight: 500;
+  
+  hr {
+    flex: 1;
+    border: none;
+    border-top: 1px solid var(--ion-color-step-200);
+  }
+  
+  span {
+    padding: 0 1rem;
+    font-size: 0.9rem;
+    background: var(--ion-color-step-50);
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+  }
+}
+
+// Login Link
+.login-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  
+  p {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+    margin: 0;
     
     a {
       color: var(--ion-color-primary);
       cursor: pointer;
+      font-weight: 600;
+      text-decoration: underline;
+      
+      &:hover {
+        color: var(--ion-color-primary-shade);
+      }
+    }
+  }
+}
+
+// Info Section
+.info-section {
+  margin-top: 2rem;
+  
+  ion-card {
+    border-radius: 16px;
+    border: 1px solid var(--ion-color-step-150);
+    
+    ion-card-content {
+      padding: 1.5rem;
+      
+      .benefits {
+        h3 {
+          color: var(--ion-color-primary);
+          font-size: 1.1rem;
+          font-weight: 600;
+          margin-bottom: 1rem;
+          text-align: center;
+        }
+        
+        ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          
+          li {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0;
+            color: var(--ion-color-dark);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            
+            &:not(:last-child) {
+              border-bottom: 1px solid var(--ion-color-step-100);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.register-card {
+  animation: slideInUp 0.4s ease-out;
+}
+
+.info-section {
+  animation: fadeIn 0.6s ease-out;
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .register-container {
+    padding: 0.5rem;
+  }
+  
+  .welcome-header {
+    margin-bottom: 1.5rem;
+    
+    .logo-section {
+      .app-logo {
+        font-size: 3rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      p {
+        font-size: 0.9rem;
+      }
     }
   }
   
-  .divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 20px 0;
-    color: var(--ion-color-medium);
+  .register-card {
+    margin: 0;
     
-    &::before,
-    &::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid var(--ion-color-medium-shade);
-    }
-    
-    span {
-      padding: 0 10px;
+    ion-card-content {
+      padding: 1rem;
     }
   }
+  
+  .name-row {
+    flex-direction: column;
+    gap: 0;
+    
+    .name-field {
+      margin-bottom: 1rem;
+    }
+  }
+  
+  .error-messages {
+    flex-direction: column;
+    gap: 0.25rem;
+    
+    ion-text:first-child {
+      margin-right: 0;
+    }
+    
+    ion-text:last-child {
+      margin-left: 0;
+    }
+  }
+  
+  .terms-section {
+    .terms-label {
+      font-size: 0.8rem;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-header {
+    .logo-section {
+      .app-logo {
+        font-size: 2.5rem;
+      }
+      
+      h1 {
+        font-size: 1.3rem;
+      }
+    }
+  }
+  
+  .register-btn,
+  .google-btn {
+    height: 44px;
+    font-size: 0.9rem;
+  }
+  
+  .info-section {
+    .benefits {
+      h3 {
+        font-size: 1rem;
+      }
+      
+      ul li {
+        font-size: 0.8rem;
+        padding: 0.4rem 0;
+      }
+    }
+  }
+}
+
+// Accessibility improvements
+@media (prefers-reduced-motion: reduce) {
+  .register-card,
+  .info-section {
+    animation: none;
+  }
+  
+  * {
+    transition: none !important;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .register-card {
+    --background: var(--ion-color-step-50);
+    border-color: var(--ion-color-step-200);
+  }
+  
+  .info-section ion-card {
+    --background: var(--ion-color-step-50);
+    border-color: var(--ion-color-step-200);
+  }
+  
+  .divider span {
+    background: var(--ion-color-step-100);
+  }
+}
+
+// Focus states for better accessibility
+ion-item:focus-within {
+  --border-color: var(--ion-color-primary);
+  --highlight-color-focused: var(--ion-color-primary);
+}
+
+ion-checkbox:focus {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+// Loading states
+.register-btn[disabled] {
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
