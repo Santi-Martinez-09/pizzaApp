@@ -4,6 +4,12 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title>🍕 Pizza App</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="goToCarrito()" *ngIf="carritoCount > 0">
+        <ion-icon name="basket-outline"></ion-icon>
+        <ion-badge color="danger">{{ carritoCount }}</ion-badge>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -16,19 +22,36 @@
 
   <!-- Selector de categorías -->
   <div class="category-selector">
-    <ion-segment [(ngModel)]="categoriaSeleccionada" color="primary">
+    <ion-segment [(ngModel)]="categoriaSeleccionada" (ionChange)="onCategoriaChange($event)" color="primary">
       <ion-segment-button value="pizzas">
-        <ion-label>🍕 Pizzas</ion-label>
+        <ion-label>🍕 Pizzas ({{ pizzas.length }})</ion-label>
       </ion-segment-button>
       <ion-segment-button value="bebidas">
-        <ion-label>🥤 Bebidas</ion-label>
+        <ion-label>🥤 Bebidas ({{ bebidas.length }})</ion-label>
       </ion-segment-button>
     </ion-segment>
   </div>
 
+  <!-- Refresher -->
+  <ion-refresher slot="fixed" (ionRefresh)="refreshData($event)">
+    <ion-refresher-content
+      pullingIcon="refresh-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando productos...">
+    </ion-refresher-content>
+  </ion-refresher>
+
   <!-- Sección de Pizzas -->
   <div *ngIf="categoriaSeleccionada === 'pizzas'" class="products-section">
-    <h2 class="section-title">Nuestras Pizzas</h2>
+    <h2 class="section-title">Nuestras Pizzas Deliciosas</h2>
+    
+    <!-- Mensaje si no hay pizzas -->
+    <div *ngIf="pizzas.length === 0 && !isLoading" class="no-products">
+      <ion-icon name="pizza-outline" class="no-products-icon"></ion-icon>
+      <p>No hay pizzas disponibles</p>
+      <ion-button (click)="loadData()" fill="outline">Recargar</ion-button>
+    </div>
     
     <ion-grid>
       <ion-row>
@@ -36,7 +59,7 @@
           size="12" 
           size-md="6" 
           size-lg="4" 
-          *ngFor="let pizza of pizzas"
+          *ngFor="let pizza of pizzas; trackBy: trackByPizzaId"
         >
           <ion-card 
             class="pizza-card" 
@@ -49,7 +72,9 @@
                 class="pizza-image"
               />
               <div class="pizza-category-badge">
-                {{ pizza.categoria }}
+                <ion-chip color="primary" outline="true">
+                  {{ getCategoriaIcon(pizza.categoria) }} {{ pizza.categoria }}
+                </ion-chip>
               </div>
             </div>
             
@@ -66,24 +91,21 @@
               <p class="pizza-description">{{ pizza.descripcion }}</p>
               
               <!-- Ingredientes -->
-              <div class="ingredients">
-                <ion-chip 
-                  *ngFor="let ingrediente of pizza.ingredientes" 
-                  color="light" 
-                  outline="true"
-                >
-                  {{ ingrediente }}
-                </ion-chip>
+              <div class="ingredients" *ngIf="pizza.ingredientes && pizza.ingredientes.length > 0">
+                <small class="ingredients-label">Ingredientes:</small>
+                <p class="ingredients-text">{{ getIngredientesText(pizza.ingredientes) }}</p>
               </div>
               
               <div class="pizza-footer">
-                <span class="price">{{ formatPrice(pizza.precio) }}</span>
+                <div class="price-section">
+                  <span class="price">{{ formatPrice(pizza.precio) }}</span>
+                </div>
                 <ion-button 
                   (click)="agregarPizzaAlCarrito(pizza)"
                   [disabled]="!pizza.disponible"
                   size="small"
                   color="primary"
-                >
+                  fill="solid">
                   <ion-icon name="add-outline" slot="start"></ion-icon>
                   {{ pizza.disponible ? 'Agregar' : 'No disponible' }}
                 </ion-button>
@@ -97,7 +119,14 @@
 
   <!-- Sección de Bebidas -->
   <div *ngIf="categoriaSeleccionada === 'bebidas'" class="products-section">
-    <h2 class="section-title">Bebidas</h2>
+    <h2 class="section-title">Bebidas Refrescantes</h2>
+    
+    <!-- Mensaje si no hay bebidas -->
+    <div *ngIf="bebidas.length === 0 && !isLoading" class="no-products">
+      <ion-icon name="cafe-outline" class="no-products-icon"></ion-icon>
+      <p>No hay bebidas disponibles</p>
+      <ion-button (click)="loadData()" fill="outline">Recargar</ion-button>
+    </div>
     
     <ion-grid>
       <ion-row>
@@ -105,7 +134,7 @@
           size="12" 
           size-md="6" 
           size-lg="3" 
-          *ngFor="let bebida of bebidas"
+          *ngFor="let bebida of bebidas; trackBy: trackByBebidaId"
         >
           <ion-card class="bebida-card" [class.unavailable]="!bebida.disponible">
             <div class="card-image-container">
@@ -119,19 +148,22 @@
             <ion-card-header>
               <ion-card-title>{{ bebida.nombre }}</ion-card-title>
               <ion-chip outline="true" color="medium">
-                {{ bebida.tamano }}
+                <ion-icon name="cafe-outline"></ion-icon>
+                <ion-label>{{ bebida.tamano }}</ion-label>
               </ion-chip>
             </ion-card-header>
             
             <ion-card-content>
               <div class="bebida-footer">
-                <span class="price">{{ formatPrice(bebida.precio) }}</span>
+                <div class="price-section">
+                  <span class="price">{{ formatPrice(bebida.precio) }}</span>
+                </div>
                 <ion-button 
                   (click)="agregarBebidaAlCarrito(bebida)"
                   [disabled]="!bebida.disponible"
                   size="small"
                   color="primary"
-                >
+                  fill="solid">
                   <ion-icon name="add-outline" slot="start"></ion-icon>
                   {{ bebida.disponible ? 'Agregar' : 'No disponible' }}
                 </ion-button>
@@ -143,11 +175,23 @@
     </ion-grid>
   </div>
 
-  <!-- FAB del carrito -->
+  <!-- FAB del carrito (solo si hay items) -->
   <ion-fab slot="fixed" vertical="bottom" horizontal="end" *ngIf="carritoCount > 0">
     <ion-fab-button (click)="goToCarrito()" color="primary">
       <ion-icon name="basket-outline"></ion-icon>
-      <ion-badge color="danger">{{ carritoCount }}</ion-badge>
+      <ion-badge color="danger" class="fab-badge">{{ carritoCount }}</ion-badge>
     </ion-fab-button>
   </ion-fab>
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="12" size-md="6" size-lg="4" *ngFor="let i of [1,2,3,4,5,6]">
+          <div class="loading-skeleton"></div>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+
 </ion-content>

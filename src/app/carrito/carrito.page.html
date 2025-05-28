@@ -13,138 +13,76 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <!-- Clima actual -->
-  <ion-card *ngIf="clima" class="weather-card">
-    <ion-card-header>
-      <ion-card-title>
-        Clima en {{ ciudad }}
-      </ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <p>🌡️ {{ getTemperatura() }}</p>
-      <p>☁️ {{ getDescripcionClima() }}</p>
-      <p>💧 Humedad: {{ clima.main?.humidity }}%</p>
-    </ion-card-content>
-  </ion-card>
-
+  
   <!-- Carrito vacío -->
   <div *ngIf="!tieneItems()" class="empty-cart">
     <ion-icon name="cart-outline" class="empty-cart-icon"></ion-icon>
-    <h2>Tus carritos están vacíos</h2>
-    <p>¡Agrega algunos deliciosos productos!</p>
+    <h2>Tu carrito está vacío</h2>
+    <p>¡Agrega algunas deliciosas pizzas!</p>
     <ion-button (click)="continuarComprando()" expand="block" fill="solid">
+      <ion-icon name="add-outline" slot="start"></ion-icon>
       Continuar comprando
     </ion-button>
   </div>
 
-  <!-- Items de ambos carritos -->
+  <!-- Items del carrito -->
   <div *ngIf="tieneItems()">
     
-    <!-- CARRITO PRINCIPAL (PizzaService) -->
-    <div *ngIf="carrito.length > 0">
-      <ion-card class="cart-section">
-        <ion-card-header>
-          <ion-card-title>
-            <ion-icon name="pizza-outline"></ion-icon>
-            Carrito Principal ({{ carrito.length }} items)
-          </ion-card-title>
-        </ion-card-header>
-      </ion-card>
-
-      <ion-list>
-        <ion-item-sliding *ngFor="let item of carrito">
-          <ion-item>
-            <div class="item-image" slot="start">
-              <img [src]="getItemImage(item)" [alt]="item.item.nombre">
-            </div>
-            
-            <ion-label>
-              <h2>{{ item.item.nombre }}</h2>
-              <p *ngIf="getItemDescription(item)">{{ getItemDescription(item) }}</p>
-              <div class="item-price">
-                <span class="unit-price">{{ formatPrice(item.precio) }} c/u</span>
-                <span class="total-price">{{ formatPrice(item.precio * item.cantidad) }}</span>
-              </div>
-            </ion-label>
-            
-            <div class="quantity-controls" slot="end">
-              <ion-button fill="clear" size="small" (click)="disminuirCantidad(item)">
-                <ion-icon name="remove-outline" slot="icon-only"></ion-icon>
-              </ion-button>
-              
-              <ion-badge color="primary" class="quantity-badge">
-                {{ item.cantidad }}
-              </ion-badge>
-              
-              <ion-button fill="clear" size="small" (click)="aumentarCantidad(item)">
-                <ion-icon name="add-outline" slot="icon-only"></ion-icon>
-              </ion-button>
-            </div>
-          </ion-item>
+    <ion-list>
+      <ion-item-sliding *ngFor="let item of carrito; trackBy: trackByItemId">
+        <ion-item>
+          <div class="item-image" slot="start">
+            <img [src]="getItemImage(item)" [alt]="item.item.nombre">
+          </div>
           
-          <ion-item-options side="end">
-            <ion-item-option color="danger" (click)="removerItem(item)">
-              <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-            </ion-item-option>
-          </ion-item-options>
-        </ion-item-sliding>
-      </ion-list>
-    </div>
-
-    <!-- CARRITO ADICIONAL (CarritoService) -->
-    <div *ngIf="carritoAdicional.length > 0">
-      <ion-card class="cart-section">
-        <ion-card-header>
-          <ion-card-title>
-            <ion-icon name="basket-outline"></ion-icon>
-            Carrito Adicional ({{ carritoAdicional.length }} items)
-          </ion-card-title>
-        </ion-card-header>
-      </ion-card>
-
-      <ion-list>
-        <ion-item *ngFor="let item of carritoAdicional">
           <ion-label>
-            <h2>{{ item.nombre || 'Producto' }}</h2>
-            <p>{{ formatPrice(item.precio || 0) }} x {{ item.cantidad || 1 }}</p>
+            <h2>{{ item.item.nombre }}</h2>
+            <p *ngIf="getItemDescription(item)">{{ getItemDescription(item) }}</p>
             <div class="item-price">
-              <span class="total-price">{{ formatPrice((item.precio || 0) * (item.cantidad || 1)) }}</span>
+              <span class="unit-price">{{ formatPrice(item.precio) }} c/u</span>
+              <span class="total-price">{{ formatPrice(item.precio * item.cantidad) }}</span>
             </div>
           </ion-label>
           
-          <ion-button 
-            slot="end" 
-            color="danger" 
-            fill="clear"
-            (click)="eliminar(item.id)">
-            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-          </ion-button>
+          <div class="quantity-controls" slot="end">
+            <ion-button fill="clear" size="small" (click)="disminuirCantidad(item)">
+              <ion-icon name="remove-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <ion-badge color="primary" class="quantity-badge">
+              {{ item.cantidad }}
+            </ion-badge>
+            
+            <ion-button fill="clear" size="small" (click)="aumentarCantidad(item)">
+              <ion-icon name="add-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
         </ion-item>
-      </ion-list>
-    </div>
+        
+        <ion-item-options side="end">
+          <ion-item-option color="danger" (click)="removerItem(item)">
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-item-option>
+        </ion-item-options>
+      </ion-item-sliding>
+    </ion-list>
 
-    <!-- Resumen del pedido COMBINADO -->
+    <!-- Resumen del pedido -->
     <ion-card class="order-summary">
       <ion-card-header>
         <ion-card-title>
           <ion-icon name="receipt-outline"></ion-icon>
-          Resumen del Pedido Completo
+          Resumen del Pedido
         </ion-card-title>
       </ion-card-header>
       
       <ion-card-content>
-        <!-- Subtotales por carrito -->
-        <div *ngIf="carrito.length > 0" class="summary-row">
-          <span>Subtotal Carrito Principal</span>
+        <div class="summary-row">
+          <span>Subtotal ({{ carrito.length }} items)</span>
           <span>{{ formatPrice(subtotal) }}</span>
         </div>
         
-        <div *ngIf="carritoAdicional.length > 0" class="summary-row">
-          <span>Subtotal Carrito Adicional</span>
-          <span>{{ formatPrice(totalAdicional) }}</span>
-        </div>
-        
-        <div *ngIf="carrito.length > 0" class="summary-row">
+        <div class="summary-row">
           <span>
             <ion-icon name="location-outline"></ion-icon>
             Domicilio
@@ -155,18 +93,8 @@
         <hr>
         
         <div class="summary-row total-row">
-          <span><strong>Total General</strong></span>
-          <span><strong>{{ formatPrice(getTotalCombinado()) }}</strong></span>
-        </div>
-
-        <!-- Desglose de totales -->
-        <div class="total-breakdown">
-          <small *ngIf="carrito.length > 0">
-            Carrito Principal: {{ formatPrice(total) }}
-          </small>
-          <small *ngIf="carritoAdicional.length > 0">
-            Carrito Adicional: {{ formatPrice(totalAdicional) }}
-          </small>
+          <span><strong>Total a Pagar</strong></span>
+          <span><strong>{{ formatPrice(total) }}</strong></span>
         </div>
       </ion-card-content>
     </ion-card>
@@ -189,12 +117,12 @@
         (click)="procederAlPago()"
         class="checkout-btn">
         <ion-icon name="card-outline" slot="start"></ion-icon>
-        Proceder al pago ({{ formatPrice(getTotalCombinado()) }})
+        Proceder al pago ({{ formatPrice(total) }})
       </ion-button>
       
       <!-- Separador -->
       <div class="payment-separator">
-        <span>o pagar con</span>
+        <span>o pagar directamente con</span>
       </div>
       
       <!-- Contenedor del botón PayPal -->
@@ -202,5 +130,6 @@
     </div>
   </div>
 </ion-content>
-<!-- SDK PayPal Modo Sandbox -->
+
+<!-- Tu configuración original de PayPal -->
 <script src="https://www.paypal.com/sdk/js?client-id=AbqotKe77My2Q-CA91Yar4U1ODuwWAUqZ_zpi_GZb0P5M7j5JhGu8u65XlWHC3Iq86C2IvNk0lkrwFoe&currency=USD"></script>

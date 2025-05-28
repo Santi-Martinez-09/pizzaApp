@@ -1,8 +1,6 @@
 import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { WeatherService } from '../services/weather.service';
-import { CarritoService } from '../services/carrito.service'; // Servicio adicional
 import {
   IonHeader,
   IonToolbar,
@@ -20,7 +18,6 @@ import {
   IonCardTitle,
   IonCardContent,
   IonBadge,
-  IonNote,
   IonItemSliding,
   IonItemOptions,
   IonItemOption,
@@ -35,8 +32,10 @@ import {
   cartOutline,
   cardOutline,
   locationOutline, 
-  receiptOutline, pizzaOutline, basketOutline } from 'ionicons/icons';
+  receiptOutline
+} from 'ionicons/icons';
 import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
+import { AuthService } from '../services/auth.service';
 
 // Declaración para PayPal
 declare var paypal: any;
@@ -64,57 +63,51 @@ declare var paypal: any;
     IonCardTitle,
     IonCardContent,
     IonBadge,
-    IonNote,
     IonItemSliding,
     IonItemOptions,
     IonItemOption
   ]
 })
-
 export class CarritoPage implements OnInit, AfterViewInit {
   carrito: ItemCarrito[] = [];
-  carritoAdicional: any[] = []; // Para productos del CarritoService adicional
   subtotal: number = 0;
   domicilio: number = 5000; // Costo fijo de domicilio
   total: number = 0;
-  totalAdicional: number = 0; // Total del servicio adicional
-  clima: any;
-  ciudad = 'Bogotá';
   
   constructor(
     private pizzaService: PizzaService,
-    private carritoService: CarritoService, // Servicio adicional
+    private authService: AuthService,
     private router: Router,
     private alertController: AlertController,
-    private toastController: ToastController,
-    private weatherService: WeatherService
+    private toastController: ToastController
   ) {
-    addIcons({trashOutline,cartOutline,pizzaOutline,removeOutline,addOutline,basketOutline,receiptOutline,locationOutline,cardOutline});
+    addIcons({
+      trashOutline,
+      cartOutline,
+      removeOutline,
+      addOutline,
+      receiptOutline,
+      locationOutline,
+      cardOutline
+    });
   }
 
   ngOnInit() {
-    // Suscripción al carrito principal (PizzaService)
+    console.log('CarritoPage: Iniciando...');
+    
+    // Suscripción al carrito del servicio
     this.pizzaService.carrito$.subscribe(carrito => {
+      console.log('CarritoPage: Carrito actualizado:', carrito);
       this.carrito = carrito;
       this.calcularTotales();
+      
       // Recargar botón de PayPal cuando cambie el carrito
       setTimeout(() => this.loadPayPalButton(), 100);
     });
 
-    // Cargar carrito adicional (CarritoService)
-    this.carritoAdicional = this.carritoService.obtenerCarrito();
-    this.totalAdicional = this.carritoService.obtenerTotal();
-
-    // Obtener información del clima
-    this.weatherService.obtenerClima(this.ciudad).subscribe({
-      next: (data) => {
-        this.clima = data;
-        console.log('Clima obtenido:', this.clima);
-      },
-      error: (err) => {
-        console.error('Error al obtener el clima:', err);
-      }
-    });
+    // Cargar carrito inicial
+    this.carrito = this.pizzaService.getCarrito();
+    this.calcularTotales();
   }
 
   ngAfterViewInit(): void {
@@ -124,39 +117,29 @@ export class CarritoPage implements OnInit, AfterViewInit {
 
   loadPayPalButton() {
     // Verificar que PayPal esté disponible y que haya items en el carrito
-    const totalItems = this.carrito.length + this.carritoAdicional.length;
-    if (typeof paypal !== 'undefined' && totalItems > 0) {
+    if (typeof paypal !== 'undefined' && this.carrito.length > 0) {
+      console.log('Cargando botón PayPal para total:', this.total);
+      
       // Limpiar el contenedor antes de crear un nuevo botón
-      const container = document.getElementById('#paypal-button-container');
+      const container = document.getElementById('paypal-button-container');
       if (container) {
         container.innerHTML = '';
       }
 
-      // Calcular total combinado para PayPal
-      const totalCombinado = this.total + this.totalAdicional;
-      const totalUSD = (totalCombinado / 4000).toFixed(2); // 1 USD ≈ 4000 COP
+      // Calcular total en USD (asumiendo 1 USD = 4000 COP)
+      const totalUSD = (this.total / 4000).toFixed(2);
+      console.log('Total en USD:', totalUSD);
 
       paypal.Buttons({
         createOrder: (data: any, actions: any) => {
-          // Combinar items de ambos carritos para PayPal
-          const itemsPayPal = [
-            ...this.carrito.map(item => ({
-              name: item.item.nombre,
-              quantity: item.cantidad.toString(),
-              unit_amount: {
-                currency_code: 'USD',
-                value: ((item.precio * item.cantidad) / 4000).toFixed(2)
-              }
-            })),
-            ...this.carritoAdicional.map(item => ({
-              name: item.nombre || 'Producto',
-              quantity: item.cantidad?.toString() || '1',
-              unit_amount: {
-                currency_code: 'USD',
-                value: ((item.precio || 0) / 4000).toFixed(2)
-              }
-            }))
-          ];
+          const itemsPayPal = this.carrito.map(item => ({
+            name: item.item.nombre,
+            quantity: item.cantidad.toString(),
+            unit_amount: {
+              currency_code: 'USD',
+              value: ((item.precio) / 4000).toFixed(2)
+            }
+          }));
 
           return actions.order.create({
             purchase_units: [{
@@ -164,7 +147,7 @@ export class CarritoPage implements OnInit, AfterViewInit {
                 value: totalUSD,
                 currency_code: 'USD'
               },
-              description: `Pedido completo - ${totalItems} items`,
+              description: `Pedido de pizzas - ${this.carrito.length} items`,
               items: itemsPayPal
             }]
           });
@@ -172,7 +155,7 @@ export class CarritoPage implements OnInit, AfterViewInit {
         onApprove: (data: any, actions: any) => {
           return actions.order.capture().then((details: any) => {
             console.log('Pago completado:', details);
-            this.pagoExitoso(details);
+            this.pagoExitosoPayPal(details);
           });
         },
         onError: (err: any) => {
@@ -184,40 +167,78 @@ export class CarritoPage implements OnInit, AfterViewInit {
           this.presentToast('Pago cancelado', 'warning');
         }
       }).render('#paypal-button-container');
+    } else {
+      console.log('PayPal no disponible o carrito vacío');
     }
   }
 
-  async pagoExitoso(details: any) {
-    // Mostrar mensaje de éxito
-    const alert = await this.alertController.create({
-      header: '¡Pago Exitoso!',
-      message: `Gracias ${details.payer.name.given_name}! Tu pedido ha sido procesado correctamente.`,
-      buttons: [
-        {
-          text: 'OK',
-          handler: () => {
-            // Limpiar ambos carritos después del pago exitoso
-            this.pizzaService.limpiarCarrito();
-            this.limpiarCarritoAdicional();
-            // Navegar a la página de inicio o confirmación
-            this.router.navigate(['/home']);
-          }
-        }
-      ]
-    });
+  async pagoExitosoPayPal(details: any) {
+    console.log('Procesando pago exitoso de PayPal');
+    
+    try {
+      // Crear el pedido en Firebase
+      const currentUser = this.authService.getCurrentUser();
+      const pedidoData = {
+        userId: currentUser?.uid || 'guest-user',
+        items: this.carrito,
+        total: this.total,
+        domicilio: this.domicilio,
+        direccion: 'Dirección por defecto - PayPal', // En producción esto debería venir de un formulario
+        telefono: '000-000-0000', // En producción esto debería venir de un formulario
+        estado: 'pendiente' as const,
+        fechaCreacion: new Date(),
+        metodoPago: 'paypal',
+        paypalTransactionId: details.id
+      };
 
-    await alert.present();
+      const pedidoId = await this.pizzaService.crearPedido(pedidoData);
+      console.log('Pedido creado con ID:', pedidoId);
+      
+      // Mostrar mensaje de éxito
+      const alert = await this.alertController.create({
+        header: '¡Pago Exitoso con PayPal!',
+        message: `
+          <div style="text-align: left;">
+            <p><strong>Gracias ${details.payer.name.given_name}!</strong></p>
+            <p>Tu pedido ha sido procesado correctamente.</p>
+            <p><strong>ID del pedido:</strong> ${pedidoId.substring(0, 8).toUpperCase()}</p>
+            <p><strong>Total pagado:</strong> ${this.formatPrice(this.total)}</p>
+            <p><strong>Transacción PayPal:</strong> ${details.id}</p>
+            <br>
+            <p>Tu pedido será preparado y enviado en 30-45 minutos.</p>
+          </div>
+        `,
+        buttons: [
+          {
+            text: 'Ver mis pedidos',
+            handler: () => {
+              this.router.navigate(['/pedidos']);
+            }
+          },
+          {
+            text: 'Seguir comprando',
+            handler: () => {
+              this.router.navigate(['/home']);
+            }
+          }
+        ]
+      });
+
+      await alert.present();
+      
+    } catch (error) {
+      console.error('Error creando pedido después de PayPal:', error);
+      this.presentToast('Error al crear el pedido. Contacta soporte.', 'danger');
+    }
   }
 
   calcularTotales() {
-    // Calcular totales del carrito principal
     this.subtotal = this.carrito.reduce((total, item) => 
       total + (item.precio * item.cantidad), 0
     );
     this.total = this.subtotal + (this.carrito.length > 0 ? this.domicilio : 0);
-
-    // Actualizar total del carrito adicional
-    this.totalAdicional = this.carritoService.obtenerTotal();
+    
+    console.log('Totales calculados - Subtotal:', this.subtotal, 'Total:', this.total);
   }
 
   formatPrice(price: number): string {
@@ -228,12 +249,13 @@ export class CarritoPage implements OnInit, AfterViewInit {
     }).format(price);
   }
 
-  // Métodos para carrito principal (PizzaService)
   aumentarCantidad(item: ItemCarrito) {
+    console.log('Aumentando cantidad de:', item.item.nombre);
     this.pizzaService.actualizarCantidad(item.id, item.cantidad + 1);
   }
 
   disminuirCantidad(item: ItemCarrito) {
+    console.log('Disminuyendo cantidad de:', item.item.nombre);
     if (item.cantidad > 1) {
       this.pizzaService.actualizarCantidad(item.id, item.cantidad - 1);
     } else {
@@ -253,6 +275,7 @@ export class CarritoPage implements OnInit, AfterViewInit {
         {
           text: 'Remover',
           handler: () => {
+            console.log('Removiendo item:', item.item.nombre);
             this.pizzaService.removerDelCarrito(item.id);
             this.presentToast(`${item.item.nombre} removido del carrito`);
           }
@@ -263,34 +286,10 @@ export class CarritoPage implements OnInit, AfterViewInit {
     await alert.present();
   }
 
-  // Métodos para carrito adicional (CarritoService)
-  eliminar(id: string) {
-    this.carritoService.eliminarProducto(id);
-    this.carritoAdicional = this.carritoService.obtenerCarrito();
-    this.totalAdicional = this.carritoService.obtenerTotal();
-    this.presentToast('Producto eliminado del carrito adicional');
-  }
-
-  limpiarCarritoAdicional() {
-    // Si el CarritoService tiene un método para limpiar
-    if (this.carritoService.limpiarCarrito) {
-      this.carritoService.limpiarCarrito();
-    } else {
-      // Si no tiene método de limpiar, eliminar uno por uno
-      this.carritoAdicional.forEach(item => {
-        if (item.id) {
-          this.carritoService.eliminarProducto(item.id);
-        }
-      });
-    }
-    this.carritoAdicional = [];
-    this.totalAdicional = 0;
-  }
-
   async limpiarCarrito() {
     const alert = await this.alertController.create({
-      header: 'Limpiar carritos',
-      message: '¿Deseas remover todos los items de ambos carritos?',
+      header: 'Limpiar carrito',
+      message: '¿Deseas remover todos los items del carrito?',
       buttons: [
         {
           text: 'Cancelar',
@@ -299,9 +298,9 @@ export class CarritoPage implements OnInit, AfterViewInit {
         {
           text: 'Limpiar',
           handler: () => {
+            console.log('Limpiando carrito completo');
             this.pizzaService.limpiarCarrito();
-            this.limpiarCarritoAdicional();
-            this.presentToast('Carritos limpiados');
+            this.presentToast('Carrito limpiado');
           }
         }
       ]
@@ -311,21 +310,24 @@ export class CarritoPage implements OnInit, AfterViewInit {
   }
 
   procederAlPago() {
-    const totalItems = this.carrito.length + this.carritoAdicional.length;
-    if (totalItems === 0) {
-      this.presentToast('Los carritos están vacíos', 'warning');
+    if (this.carrito.length === 0) {
+      this.presentToast('El carrito está vacío', 'warning');
       return;
     }
+    
+    console.log('Navegando a página de pago con:', {
+      carrito: this.carrito,
+      total: this.total,
+      subtotal: this.subtotal,
+      domicilio: this.domicilio
+    });
     
     this.router.navigate(['/pago'], {
       state: {
         carrito: this.carrito,
-        carritoAdicional: this.carritoAdicional,
-        total: this.total + this.totalAdicional,
+        total: this.total,
         subtotal: this.subtotal,
-        totalAdicional: this.totalAdicional,
-        domicilio: this.domicilio,
-        clima: this.clima
+        domicilio: this.domicilio
       }
     });
   }
@@ -359,27 +361,12 @@ export class CarritoPage implements OnInit, AfterViewInit {
     return `Tamaño: ${(item.item as any).tamano || ''}`;
   }
 
-  // Métodos para información del clima
-  getTemperatura(): string {
-    return this.clima?.main?.temp ? `${Math.round(this.clima.main.temp)}°C` : '';
-  }
-
-  getDescripcionClima(): string {
-    return this.clima?.weather?.[0]?.description || '';
-  }
-
-  getIconoClima(): string {
-    return this.clima?.weather?.[0]?.icon ? 
-      `https://openweathermap.org/img/w/${this.clima.weather[0].icon}.png` : '';
-  }
-
-  // Método para obtener el total combinado
-  getTotalCombinado(): number {
-    return this.total + this.totalAdicional;
-  }
-
-  // Método para verificar si hay items en cualquier carrito
   tieneItems(): boolean {
-    return this.carrito.length > 0 || this.carritoAdicional.length > 0;
+    return this.carrito.length > 0;
+  }
+
+  // Track function para optimizar el ngFor
+  trackByItemId(index: number, item: ItemCarrito): string {
+    return item.id;
   }
 }
