@@ -39,6 +39,8 @@ import {
   cardOutline,
   checkmarkCircleOutline
 } from 'ionicons/icons';
+import { environment } from '../../environments/environment';
+
 
 import { PizzaService, ItemCarrito } from '../services/pizza/pizza.service';
 import { AuthService } from '../services/auth.service';
@@ -212,7 +214,8 @@ export class PagoPage implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC8QJ5z5Q1LvJ8X9k5eF6wD2zH3nM4rP8A&libraries=geometry,places`;
+      // En el método loadGoogleMapsAPI():
+script.src = `https://maps.googleapis.com/maps/api/js?key=${environment.googleMapsApiKey}&libraries=geometry,places`;
       script.async = true;
       script.defer = true;
 
@@ -268,12 +271,18 @@ export class PagoPage implements OnInit, AfterViewInit, OnDestroy {
       this.calcularTotales();
 
       // Mostrar mapa
-      await this.initializeMap(userLocation);
       this.mostrarMapa = true;
+      
+      // Esperar un momento para que el DOM se actualice
+      setTimeout(async () => {
+        await this.initializeMap(userLocation);
+      }, 200);
 
       // Inicializar PayPal si está seleccionado
       if (this.metodoPagoSeleccionado === 'paypal') {
-        await this.initializePayPal();
+        setTimeout(() => {
+          this.initializePayPal();
+        }, 1000);
       }
 
       this.presentToast('✅ Distancia calculada correctamente', 'success');
@@ -361,10 +370,18 @@ export class PagoPage implements OnInit, AfterViewInit, OnDestroy {
   // Inicializar mapa
   private async initializeMap(userLocation: {lat: number, lng: number}) {
     const mapContainer = document.getElementById('map');
-    if (!mapContainer) return;
+    if (!mapContainer) {
+      console.error('❌ Contenedor del mapa no encontrado');
+      return;
+    }
 
-    // Crear mapa
-    this.map = new google.maps.Map(mapContainer, {
+    console.log('🗺️ Inicializando mapa...');
+
+    // Esperar un momento para que el DOM se actualice
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Configuración del mapa
+    const mapOptions = {
       zoom: 12,
       center: userLocation,
       mapTypeId: google.maps.MapTypeId.ROADMAP,
@@ -374,41 +391,81 @@ export class PagoPage implements OnInit, AfterViewInit, OnDestroy {
           elementType: 'labels',
           stylers: [{ visibility: 'off' }]
         }
-      ]
+      ],
+      // Opciones adicionales para asegurar renderizado
+      gestureHandling: 'cooperative',
+      zoomControl: true,
+      mapTypeControl: false,
+      scaleControl: true,
+      streetViewControl: false,
+      rotateControl: false,
+      fullscreenControl: false
+    };
+
+    // Crear mapa
+    this.map = new google.maps.Map(mapContainer, mapOptions);
+
+    // Esperar a que el mapa termine de cargar
+    google.maps.event.addListenerOnce(this.map, 'tilesloaded', () => {
+      console.log('✅ Mapa cargado completamente');
     });
 
+    // Forzar resize del mapa después de un momento
+    setTimeout(() => {
+      if (this.map) {
+        google.maps.event.trigger(this.map, 'resize');
+        this.map.setCenter(userLocation);
+      }
+    }, 500);
+
     // Marcador de la dirección del usuario
-    new google.maps.Marker({
+    const userMarker = new google.maps.Marker({
       position: userLocation,
       map: this.map,
       title: 'Tu dirección de entrega',
       icon: {
         url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
         scaledSize: new google.maps.Size(40, 40)
-      }
+      },
+      animation: google.maps.Animation.DROP
     });
 
     // Marcador de Universidad Libre
-    new google.maps.Marker({
+    const universityMarker = new google.maps.Marker({
       position: this.UNIVERSIDAD_LIBRE,
       map: this.map,
       title: this.UNIVERSIDAD_LIBRE.nombre,
       icon: {
         url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
         scaledSize: new google.maps.Size(40, 40)
-      }
+      },
+      animation: google.maps.Animation.DROP
     });
 
-    // Dibujar ruta
+    // Configurar renderer de direcciones
     this.directionsRenderer.setMap(this.map);
+    this.directionsRenderer.setOptions({
+      suppressMarkers: false,
+      polylineOptions: {
+        strokeColor: '#4285f4',
+        strokeWeight: 5,
+        strokeOpacity: 0.8
+      }
+    });
     
+    // Dibujar ruta
     this.directionsService.route({
       origin: userLocation,
       destination: this.UNIVERSIDAD_LIBRE,
-      travelMode: google.maps.TravelMode.DRIVING
+      travelMode: google.maps.TravelMode.DRIVING,
+      avoidHighways: false,
+      avoidTolls: false
     }, (result: any, status: string) => {
       if (status === 'OK') {
         this.directionsRenderer.setDirections(result);
+        console.log('✅ Ruta dibujada correctamente');
+      } else {
+        console.error('❌ Error dibujando ruta:', status);
       }
     });
 
@@ -417,6 +474,15 @@ export class PagoPage implements OnInit, AfterViewInit, OnDestroy {
     bounds.extend(userLocation);
     bounds.extend(this.UNIVERSIDAD_LIBRE);
     this.map.fitBounds(bounds);
+
+    // Asegurar zoom mín/máx
+    setTimeout(() => {
+      if (this.map && this.map.getZoom() > 15) {
+        this.map.setZoom(15);
+      }
+    }, 1000);
+
+    console.log('🗺️ Mapa inicializado completamente');
   }
 
   // Inicializar PayPal
@@ -687,5 +753,42 @@ export class PagoPage implements OnInit, AfterViewInit, OnDestroy {
       translucent: true
     });
     await toast.present();
+  }
+
+  // Debug del estado del mapa
+  private debugMapState() {
+    console.log('🔍 === DEBUG MAPA ===');
+    console.log('Maps API disponible:', typeof google !== 'undefined' && google.maps);
+    console.log('Contenedor mapa existe:', !!document.getElementById('map'));
+    console.log('Instancia de mapa:', !!this.map);
+    console.log('Distancia info:', this.distanciaInfo);
+    console.log('Mostrar mapa:', this.mostrarMapa);
+    
+    const container = document.getElementById('map');
+    if (container) {
+      console.log('Dimensiones contenedor:', {
+        width: container.offsetWidth,
+        height: container.offsetHeight,
+        display: window.getComputedStyle(container).display
+      });
+    }
+  }
+
+  // Forzar renderizado del mapa (método para debug)
+  forceMapRender() {
+    console.log('🔄 Forzando renderizado del mapa...');
+    this.debugMapState();
+    
+    if (this.map) {
+      setTimeout(() => {
+        google.maps.event.trigger(this.map, 'resize');
+        if (this.distanciaInfo) {
+          // Re-centrar en la ubicación del usuario si existe
+          const bounds = new google.maps.LatLngBounds();
+          bounds.extend(this.UNIVERSIDAD_LIBRE);
+          this.map.fitBounds(bounds);
+        }
+      }, 100);
+    }
   }
 }

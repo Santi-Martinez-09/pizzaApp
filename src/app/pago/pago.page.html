@@ -177,6 +177,13 @@
     <ion-card-content>
       <div id="map" class="map-container"></div>
       
+      <!-- Botón temporal para debug -->
+      <div style="margin-top: 1rem; text-align: center;">
+        <ion-button size="small" fill="outline" color="medium" (click)="forceMapRender()">
+          🔄 Recargar Mapa (Debug)
+        </ion-button>
+      </div>
+      
       <div class="map-legend">
         <div class="legend-item">
           <div class="marker delivery-marker"></div>

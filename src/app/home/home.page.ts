@@ -328,6 +328,13 @@ export class HomePage implements OnInit {
            (ingredientes.length > 3 ? ` +${ingredientes.length - 3} más` : '');
   }
 
+
+  // Verificar si hay items en el carrito
+  tieneItems(): boolean {
+    return this.carritoCount > 0;
+  }
+
+
   getCategoriaIcon(categoria: string): string {
     const iconos: { [key: string]: string } = {
       'clasica': '🍕',

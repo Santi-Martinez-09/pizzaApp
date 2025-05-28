@@ -4,6 +4,7 @@
 
 export const environment = {
   production: false,
+  googleMapsApiKey: 'AIzaSyDDfr-GyLMH_EhPhdQxRiGlodX25YIIHLc',
   firebaseConfig:{
     apiKey: "AIzaSyDoNQyyqsPeZxHFqjiIbpkfo9ELTgJ2nOU",
     authDomain: "pizzaapp-cde40.firebaseapp.com",

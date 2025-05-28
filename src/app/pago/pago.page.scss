@@ -230,6 +230,20 @@
     overflow: hidden;
     border: 2px solid var(--ion-color-step-100);
     margin-bottom: 1rem;
+    background: #f0f0f0;
+    
+    // Asegurar que Google Maps se renderice correctamente
+    > div {
+      height: 100% !important;
+    }
+    
+    .gm-style {
+      height: 100% !important;
+    }
+    
+    .gm-style > div:first-child {
+      height: 100% !important;
+    }
   }
   
   .map-legend {

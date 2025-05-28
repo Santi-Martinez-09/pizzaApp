@@ -35,3 +35,30 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+// Agregar esto al final de tu archivo src/global.scss
+
+/* Google Maps Fix */
+.gm-style {
+  height: 100% !important;
+}
+
+.gm-style > div:first-child {
+  height: 100% !important;
+}
+
+/* Asegurar que los contenedores de mapas tengan altura */
+#map {
+  height: 300px !important;
+  width: 100% !important;
+  background: #e0e0e0;
+}
+
+/* Evitar que Ionic interfiera con Google Maps */
+.gm-style img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.gm-style-cc {
+  display: none !important;
+}
