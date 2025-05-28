@@ -112,7 +112,7 @@ export class PagoPage implements OnInit, AfterViewInit, OnDestroy {
 
   // Estado de cálculo de distancia
   calculandoDistancia = false;
-  distanciaInfo: DistanciaInfo | null = null;
+  distanciaInfo: DistanciaInfo | undefined = undefined;
   mostrarMapa = false;
 
   // Coordenadas Universidad Libre Bogotá
@@ -288,13 +288,13 @@ script.src = `https://maps.googleapis.com/maps/api/js?key=${environment.googleMa
       this.presentToast('✅ Distancia calculada correctamente', 'success');
       
     } catch (error) {
-      console.error('❌ Error calculando distancia:', error);
-      this.presentToast(`Error: ${error}`, 'danger');
-      this.distanciaInfo = null;
-      this.mostrarMapa = false;
-    } finally {
-      this.calculandoDistancia = false;
-    }
+  console.error('❌ Error calculando distancia:', error);
+  this.presentToast(`Error: ${error}`, 'danger');
+  this.distanciaInfo = undefined;  // ← Cambiar null por undefined
+  this.mostrarMapa = false;
+} finally {
+  this.calculandoDistancia = false;
+}
   }
 
   // Geocodificar dirección

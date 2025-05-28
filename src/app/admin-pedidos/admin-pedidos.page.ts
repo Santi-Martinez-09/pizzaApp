@@ -55,7 +55,10 @@ import {
   searchOutline,
   checkmarkOutline,
   closeOutline,
-  alertCircleOutline
+  alertCircleOutline,
+  cashOutline,
+  personOutline,
+  locationOutline
 } from 'ionicons/icons';
 import { Subscription, interval } from 'rxjs';
 import { AuthService } from '../services/auth.service';
@@ -197,7 +200,10 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
       searchOutline,
       checkmarkOutline,
       closeOutline,
-      alertCircleOutline
+      alertCircleOutline,
+      cashOutline,
+      personOutline,
+      locationOutline
     });
   }
 
@@ -268,26 +274,26 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
     // Filtrar por estado
     if (this.selectedSegment !== 'todos') {
       pedidosFiltrados = pedidosFiltrados.filter(pedido => 
-        pedido.estado === this.selectedSegment
+        this.getEstadoPedido(pedido) === this.selectedSegment
       );
     }
     
     // Filtrar por término de búsqueda
     if (this.searchTerm.trim()) {
       pedidosFiltrados = pedidosFiltrados.filter(pedido =>
-        pedido.id?.toLowerCase().includes(this.searchTerm) ||
-        pedido.direccion.toLowerCase().includes(this.searchTerm) ||
-        pedido.telefono.includes(this.searchTerm) ||
-        pedido.items.some(item => 
-          item.item.nombre.toLowerCase().includes(this.searchTerm)
+        this.getPedidoId(pedido).toLowerCase().includes(this.searchTerm) ||
+        this.getDireccion(pedido).toLowerCase().includes(this.searchTerm) ||
+        this.getTelefono(pedido).includes(this.searchTerm) ||
+        this.getItems(pedido).some(item => 
+          item?.item?.nombre?.toLowerCase().includes(this.searchTerm)
         )
       );
     }
     
     // Ordenar por fecha (más recientes primero)
     pedidosFiltrados.sort((a, b) => {
-      const fechaA = a.fechaCreacion instanceof Date ? a.fechaCreacion : new Date(a.fechaCreacion);
-      const fechaB = b.fechaCreacion instanceof Date ? b.fechaCreacion : new Date(b.fechaCreacion);
+      const fechaA = a?.fechaCreacion instanceof Date ? a.fechaCreacion : new Date(a?.fechaCreacion || 0);
+      const fechaB = b?.fechaCreacion instanceof Date ? b.fechaCreacion : new Date(b?.fechaCreacion || 0);
       return fechaB.getTime() - fechaA.getTime();
     });
     
@@ -297,11 +303,11 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
   calcularEstadisticas() {
     this.estadisticas = {
       total: this.pedidos.length,
-      pendientes: this.pedidos.filter(p => p.estado === 'pendiente').length,
-      preparando: this.pedidos.filter(p => p.estado === 'preparando').length,
-      enviados: this.pedidos.filter(p => p.estado === 'enviado').length,
-      entregados: this.pedidos.filter(p => p.estado === 'entregado').length,
-      cancelados: this.pedidos.filter(p => p.estado === 'cancelado').length,
+      pendientes: this.pedidos.filter(p => this.getEstadoPedido(p) === 'pendiente').length,
+      preparando: this.pedidos.filter(p => this.getEstadoPedido(p) === 'preparando').length,
+      enviados: this.pedidos.filter(p => this.getEstadoPedido(p) === 'enviado').length,
+      entregados: this.pedidos.filter(p => this.getEstadoPedido(p) === 'entregado').length,
+      cancelados: this.pedidos.filter(p => this.getEstadoPedido(p) === 'cancelado').length,
       ingresosDia: this.calcularIngresosDia(),
       tiempoPromedio: this.calcularTiempoPromedio()
     };
@@ -313,25 +319,25 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
     
     return this.pedidos
       .filter(pedido => {
-        const fechaPedido = pedido.fechaCreacion instanceof Date ? 
-          pedido.fechaCreacion : new Date(pedido.fechaCreacion);
-        return fechaPedido >= hoy && pedido.estado === 'entregado';
+        const fechaPedido = pedido?.fechaCreacion instanceof Date ? 
+          pedido.fechaCreacion : new Date(pedido?.fechaCreacion || 0);
+        return fechaPedido >= hoy && this.getEstadoPedido(pedido) === 'entregado';
       })
-      .reduce((total, pedido) => total + pedido.total, 0);
+      .reduce((total, pedido) => total + (pedido?.total || 0), 0);
   }
 
   private calcularTiempoPromedio(): number {
     const pedidosEntregados = this.pedidos.filter(p => 
-      p.estado === 'entregado' && p.fechaEntrega
+      this.getEstadoPedido(p) === 'entregado' && p?.fechaEntrega
     );
     
     if (pedidosEntregados.length === 0) return 0;
     
     const tiempoTotal = pedidosEntregados.reduce((total, pedido) => {
-      const fechaCreacion = pedido.fechaCreacion instanceof Date ? 
-        pedido.fechaCreacion : new Date(pedido.fechaCreacion);
-      const fechaEntrega = pedido.fechaEntrega instanceof Date ? 
-        pedido.fechaEntrega : new Date(pedido.fechaEntrega);
+      const fechaCreacion = pedido?.fechaCreacion instanceof Date ? 
+        pedido.fechaCreacion : new Date(pedido?.fechaCreacion || 0);
+      const fechaEntrega = pedido?.fechaEntrega instanceof Date ? 
+        pedido.fechaEntrega : new Date(pedido?.fechaEntrega || 0);
       
       return total + (fechaEntrega.getTime() - fechaCreacion.getTime());
     }, 0);
@@ -341,10 +347,10 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
 
   async cambiarEstadoPedido(pedido: Pedido) {
     const actionSheet = await this.actionSheetController.create({
-      header: `Cambiar estado - Pedido #${(pedido.id?.substring(0, 8) || 'TEMP').toUpperCase()}`,
+      header: `Cambiar estado - Pedido #${this.getPedidoId(pedido)}`,
       buttons: [
         ...this.estadosDisponibles
-          .filter(estado => estado.key !== pedido.estado)
+          .filter(estado => estado.key !== this.getEstadoPedido(pedido))
           .map(estado => ({
             text: `${this.getEstadoIcon(estado.key)} ${estado.label}`,
             handler: () => this.confirmarCambioEstado(pedido, estado.key)
@@ -366,12 +372,12 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
       header: 'Confirmar cambio de estado',
       message: `
         <div style="text-align: left;">
-          <p><strong>Pedido:</strong> #${(pedido.id?.substring(0, 8) || 'TEMP').toUpperCase()}</p>
-          <p><strong>Cliente:</strong> ${pedido.direccion}</p>
+          <p><strong>Pedido:</strong> #${this.getPedidoId(pedido)}</p>
+          <p><strong>Cliente:</strong> ${this.getDireccion(pedido)}</p>
           <hr>
-          <p><strong>Estado actual:</strong> ${this.getEstadoText(pedido.estado)}</p>
-          <p><strong>Nuevo estado:</strong> ${estadoInfo?.label}</p>
-          <p style="color: #666; font-size: 0.9em;">${estadoInfo?.description}</p>
+          <p><strong>Estado actual:</strong> ${this.getEstadoText(this.getEstadoPedido(pedido))}</p>
+          <p><strong>Nuevo estado:</strong> ${estadoInfo?.label || 'Desconocido'}</p>
+          <p style="color: #666; font-size: 0.9em;">${estadoInfo?.description || ''}</p>
         </div>
       `,
       buttons: [
@@ -399,14 +405,14 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      if (!pedido.id) {
+      if (!pedido?.id) {
         throw new Error('ID del pedido no válido');
       }
 
       await this.pizzaService.updatePedidoEstado(pedido.id, nuevoEstado);
       
       // Actualizar localmente
-      const index = this.pedidos.findIndex(p => p.id === pedido.id);
+      const index = this.pedidos.findIndex(p => p?.id === pedido.id);
       if (index !== -1) {
         this.pedidos[index].estado = nuevoEstado;
         if (nuevoEstado === 'entregado') {
@@ -431,44 +437,44 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
   }
 
   async verDetallesPedido(pedido: Pedido) {
-    const itemsList = pedido.items.map((item: ItemCarrito) => 
-      `• ${item.item.nombre} x${item.cantidad} - ${this.formatPrice(item.precio * item.cantidad)}`
+    const itemsList = this.getItems(pedido).map((item: ItemCarrito) => 
+      `• ${item?.item?.nombre || 'Producto sin nombre'} x${item?.cantidad || 0} - ${this.formatPrice((item?.precio || 0) * (item?.cantidad || 0))}`
     ).join('<br>');
 
-    const fechaCreacion = this.formatDate(pedido.fechaCreacion);
-    const fechaEntrega = pedido.fechaEntrega ? this.formatDate(pedido.fechaEntrega) : 'No entregado';
+    const fechaCreacion = this.formatDate(pedido?.fechaCreacion);
+    const fechaEntrega = pedido?.fechaEntrega ? this.formatDate(pedido.fechaEntrega) : 'No entregado';
 
     const alert = await this.alertController.create({
-      header: `📦 Pedido #${(pedido.id?.substring(0, 8) || 'TEMP').toUpperCase()}`,
+      header: `📦 Pedido #${this.getPedidoId(pedido)}`,
       message: `
         <div style="text-align: left; max-height: 400px; overflow-y: auto;">
           <h4>🛒 Items del pedido:</h4>
           <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0;">
-            ${itemsList}
+            ${itemsList || 'Sin items'}
           </div>
           
           <h4>📍 Información de entrega:</h4>
-          <p><strong>Dirección:</strong> ${pedido.direccion}</p>
-          <p><strong>Teléfono:</strong> ${pedido.telefono}</p>
-          ${pedido.datosEntrega ? `
-            <p><strong>Nombre:</strong> ${pedido.datosEntrega.nombre || 'No especificado'}</p>
+          <p><strong>Dirección:</strong> ${this.getDireccion(pedido)}</p>
+          <p><strong>Teléfono:</strong> ${this.getTelefono(pedido)}</p>
+          ${pedido?.datosEntrega ? `
+            <p><strong>Nombre:</strong> ${this.getClienteName(pedido)}</p>
             <p><strong>Detalles:</strong> ${pedido.datosEntrega.detalles || 'Ninguno'}</p>
           ` : ''}
           
           <h4>💰 Información de pago:</h4>
-          <p><strong>Subtotal:</strong> ${this.formatPrice(pedido.total - pedido.domicilio)}</p>
-          <p><strong>Domicilio:</strong> ${this.formatPrice(pedido.domicilio)}</p>
-          <p><strong>Total:</strong> ${this.formatPrice(pedido.total)}</p>
-          <p><strong>Método:</strong> ${this.getPaymentMethodName(pedido.metodoPago)}</p>
-          ${pedido.paypalTransactionId ? `<p><strong>ID PayPal:</strong> ${pedido.paypalTransactionId}</p>` : ''}
+          <p><strong>Subtotal:</strong> ${this.formatPrice(this.getSubtotal(pedido))}</p>
+          <p><strong>Domicilio:</strong> ${this.formatPrice(pedido?.domicilio || 0)}</p>
+          <p><strong>Total:</strong> ${this.formatPrice(pedido?.total || 0)}</p>
+          <p><strong>Método:</strong> ${this.getPaymentMethodName(pedido?.metodoPago || 'desconocido')}</p>
+          ${pedido?.paypalTransactionId ? `<p><strong>ID PayPal:</strong> ${pedido.paypalTransactionId}</p>` : ''}
           
           <h4>📅 Fechas:</h4>
           <p><strong>Creado:</strong> ${fechaCreacion}</p>
           <p><strong>Entregado:</strong> ${fechaEntrega}</p>
           
           <h4>📊 Estado actual:</h4>
-          <p style="color: var(--ion-color-${this.getEstadoBadgeColor(pedido.estado)});">
-            <strong>${this.getEstadoIcon(pedido.estado)} ${this.getEstadoText(pedido.estado)}</strong>
+          <p style="color: var(--ion-color-${this.getEstadoBadgeColor(this.getEstadoPedido(pedido))});">
+            <strong>${this.getEstadoIcon(this.getEstadoPedido(pedido))} ${this.getEstadoText(this.getEstadoPedido(pedido))}</strong>
           </p>
         </div>
       `,
@@ -515,26 +521,85 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
     }
   }
 
-  // Métodos de utilidad
+  // ============ MÉTODOS AUXILIARES SEGUROS ============
+
+  // Método seguro para obtener el ID del pedido
+  getPedidoId(pedido: Pedido): string {
+    return pedido?.id ? pedido.id.substring(0, 8).toUpperCase() : 'TEMP';
+  }
+
+  // Método seguro para obtener el nombre del cliente
+  getClienteName(pedido: Pedido): string {
+    return pedido?.datosEntrega?.nombre || 'Cliente sin nombre';
+  }
+
+  // Método seguro para obtener la dirección
+  getDireccion(pedido: Pedido): string {
+    return pedido?.direccion || 'Sin dirección especificada';
+  }
+
+  // Método seguro para obtener el teléfono
+  getTelefono(pedido: Pedido): string {
+    return pedido?.telefono || 'Sin teléfono';
+  }
+
+  // Método seguro para obtener el total de items
+  getTotalItems(pedido: Pedido): number {
+    return pedido?.items?.length || 0;
+  }
+
+  // Método seguro para obtener items del pedido
+  getItems(pedido: Pedido): ItemCarrito[] {
+    return pedido?.items || [];
+  }
+
+  // Método seguro para calcular subtotal
+  getSubtotal(pedido: Pedido): number {
+    return (pedido?.total || 0) - (pedido?.domicilio || 0);
+  }
+
+  // Método seguro para el estado del pedido
+  getEstadoPedido(pedido: Pedido): string {
+    return pedido?.estado || 'pendiente';
+  }
+
+  // Método para verificar si un pedido es válido
+  isPedidoValido(pedido: Pedido): boolean {
+    return !!(pedido && pedido.id && pedido.items && pedido.items.length > 0);
+  }
+
+  // ============ MÉTODOS DE UTILIDAD ============
+
   formatPrice(price: number): string {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
       minimumFractionDigits: 0
-    }).format(price);
+    }).format(price || 0);
   }
 
   formatDate(date: Date | any): string {
     if (!date) return 'Sin fecha';
     
-    const dateObj = date instanceof Date ? date : new Date(date);
-    return dateObj.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // Verificar que la fecha sea válida
+      if (isNaN(dateObj.getTime())) {
+        return 'Fecha inválida';
+      }
+      
+      return dateObj.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Error en fecha';
+    }
   }
 
   getEstadoBadgeColor(estado: string): string {
@@ -557,13 +622,14 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
       'paypal': 'PayPal',
       'payu': 'Tarjeta de crédito',
       'efectivo': 'Efectivo',
+      'cash': 'Efectivo',
       'bank_transfer': 'Transferencia bancaria'
     };
     return methods[method] || method;
   }
 
   getContadorPorEstado(estado: string): number {
-    return this.pedidos.filter(p => p.estado === estado).length;
+    return this.pedidos.filter(p => this.getEstadoPedido(p) === estado).length;
   }
 
   private async presentToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
@@ -578,6 +644,6 @@ export class AdminPedidosPage implements OnInit, OnDestroy {
   }
 
   trackByPedidoId(index: number, pedido: Pedido): string {
-    return pedido.id || index.toString();
+    return pedido?.id ?? index.toString();
   }
 }

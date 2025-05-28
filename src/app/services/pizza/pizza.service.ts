@@ -69,10 +69,10 @@ export interface Pedido {
   };
   paypalTransactionId?: string;
   datosEntrega?: {
-    nombre: string;
-    telefono: string;
-    direccion: string;
-    detalles: string;
+    nombre?: string;
+    telefono?: string;
+    direccion?: string;
+    detalles?: string;
   };
   distanciaInfo?: {
     distancia: string;

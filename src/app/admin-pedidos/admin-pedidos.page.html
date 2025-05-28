@@ -162,151 +162,154 @@
 
     <!-- Lista de pedidos -->
     <div *ngIf="!isLoading && pedidosFiltrados.length > 0" class="pedidos-list">
-      <ion-card 
-        *ngFor="let pedido of pedidosFiltrados; trackBy: trackByPedidoId" 
-        class="pedido-card"
-        [class]="'estado-' + pedido.estado">
+      <!-- ✅ CORRECCIÓN: Usar ng-container para separar directivas estructurales -->
+      <ng-container *ngFor="let pedido of pedidosFiltrados; trackBy: trackByPedidoId">
+        <ion-card 
+          *ngIf="isPedidoValido(pedido)"
+          class="pedido-card"
+          [class]="'estado-' + getEstadoPedido(pedido)">
         
-        <!-- Header del pedido -->
-        <ion-card-header>
-          <div class="pedido-header">
-            <div class="pedido-info">
-              <ion-card-title>
-                Pedido #{{ (pedido.id?.substring(0, 8) || 'TEMP').toUpperCase() }}
-              </ion-card-title>
-              <ion-note>{{ formatDate(pedido.fechaCreacion) }}</ion-note>
+          <!-- Header del pedido -->
+          <ion-card-header>
+            <div class="pedido-header">
+              <div class="pedido-info">
+                <ion-card-title>
+                  Pedido #{{ getPedidoId(pedido) }}
+                </ion-card-title>
+                <ion-note>{{ formatDate(pedido?.fechaCreacion) }}</ion-note>
+              </div>
+              
+              <div class="pedido-actions">
+                <ion-badge 
+                  [color]="getEstadoBadgeColor(getEstadoPedido(pedido))" 
+                  class="estado-badge">
+                  <ion-icon [name]="getEstadoIcon(getEstadoPedido(pedido))"></ion-icon>
+                  {{ getEstadoText(getEstadoPedido(pedido)) }}
+                </ion-badge>
+              </div>
             </div>
+          </ion-card-header>
+
+          <!-- Contenido del pedido -->
+          <ion-card-content>
             
-            <div class="pedido-actions">
-              <ion-badge 
-                [color]="getEstadoBadgeColor(pedido.estado)" 
-                class="estado-badge">
-                <ion-icon [name]="getEstadoIcon(pedido.estado)"></ion-icon>
-                {{ getEstadoText(pedido.estado) }}
-              </ion-badge>
-            </div>
-          </div>
-        </ion-card-header>
-
-        <!-- Contenido del pedido -->
-        <ion-card-content>
-          
-          <!-- Información del cliente -->
-          <div class="cliente-info">
-            <div class="info-row">
-              <ion-icon name="location-outline" color="primary"></ion-icon>
-              <span class="info-text">{{ pedido.direccion }}</span>
-            </div>
-            <div class="info-row">
-              <ion-icon name="call-outline" color="primary"></ion-icon>
-              <span class="info-text">{{ pedido.telefono }}</span>
-            </div>
-            <div class="info-row" *ngIf="pedido.datosEntrega?.nombre">
-              <ion-icon name="person-outline" color="primary"></ion-icon>
-              <span class="info-text">{{ pedido.datosEntrega.nombre }}</span>
-            </div>
-          </div>
-
-          <!-- Items resumidos -->
-          <div class="items-resumen">
-            <h4>Items del pedido:</h4>
-            <div class="items-list">
-              <div *ngFor="let item of pedido.items.slice(0, 3)" class="item-row">
-                <span class="item-name">{{ item.item.nombre }}</span>
-                <span class="item-cantidad">x{{ item.cantidad }}</span>
-                <span class="item-precio">{{ formatPrice(item.precio * item.cantidad) }}</span>
+            <!-- Información del cliente -->
+            <div class="cliente-info">
+              <div class="info-row">
+                <ion-icon name="location-outline" color="primary"></ion-icon>
+                <span class="info-text">{{ getDireccion(pedido) }}</span>
               </div>
-              <div *ngIf="pedido.items.length > 3" class="more-items">
-                <span>+ {{ pedido.items.length - 3 }} items más</span>
+              <div class="info-row">
+                <ion-icon name="call-outline" color="primary"></ion-icon>
+                <span class="info-text">{{ getTelefono(pedido) }}</span>
+              </div>
+              <div class="info-row" *ngIf="pedido?.datosEntrega?.nombre">
+                <ion-icon name="person-outline" color="primary"></ion-icon>
+                <span class="info-text">{{ getClienteName(pedido) }}</span>
               </div>
             </div>
-          </div>
 
-          <!-- Información de pago -->
-          <div class="pago-info">
-            <div class="pago-row">
-              <span>Subtotal:</span>
-              <span>{{ formatPrice(pedido.total - pedido.domicilio) }}</span>
+            <!-- Items resumidos -->
+            <div class="items-resumen">
+              <h4>Items del pedido:</h4>
+              <div class="items-list">
+                <div *ngFor="let item of getItems(pedido).slice(0, 3)" class="item-row">
+                  <span class="item-name">{{ item?.item?.nombre || 'Producto sin nombre' }}</span>
+                  <span class="item-cantidad">x{{ item?.cantidad || 0 }}</span>
+                  <span class="item-precio">{{ formatPrice((item?.precio || 0) * (item?.cantidad || 0)) }}</span>
+                </div>
+                <div *ngIf="getTotalItems(pedido) > 3" class="more-items">
+                  <span>+ {{ getTotalItems(pedido) - 3 }} items más</span>
+                </div>
+              </div>
             </div>
-            <div class="pago-row">
-              <span>Domicilio:</span>
-              <span>{{ formatPrice(pedido.domicilio) }}</span>
+
+            <!-- Información de pago -->
+            <div class="pago-info">
+              <div class="pago-row">
+                <span>Subtotal:</span>
+                <span>{{ formatPrice(getSubtotal(pedido)) }}</span>
+              </div>
+              <div class="pago-row">
+                <span>Domicilio:</span>
+                <span>{{ formatPrice(pedido?.domicilio || 0) }}</span>
+              </div>
+              <div class="pago-row total">
+                <span><strong>Total:</strong></span>
+                <span><strong>{{ formatPrice(pedido?.total || 0) }}</strong></span>
+              </div>
+              <div class="metodo-pago">
+                <ion-chip color="medium" outline="true">
+                  <ion-icon name="card-outline"></ion-icon>
+                  <ion-label>{{ getPaymentMethodName(pedido?.metodoPago || 'desconocido') }}</ion-label>
+                </ion-chip>
+              </div>
             </div>
-            <div class="pago-row total">
-              <span><strong>Total:</strong></span>
-              <span><strong>{{ formatPrice(pedido.total) }}</strong></span>
-            </div>
-            <div class="metodo-pago">
-              <ion-chip color="medium" outline="true">
-                <ion-icon name="card-outline"></ion-icon>
-                <ion-label>{{ getPaymentMethodName(pedido.metodoPago) }}</ion-label>
+
+            <!-- Tiempo transcurrido -->
+            <div class="tiempo-info" *ngIf="getEstadoPedido(pedido) !== 'entregado' && getEstadoPedido(pedido) !== 'cancelado'">
+              <ion-chip color="warning" class="tiempo-chip">
+                <ion-icon name="time-outline"></ion-icon>
+                <ion-label>
+                  {{ formatDate(pedido?.fechaCreacion) }}
+                </ion-label>
               </ion-chip>
             </div>
-          </div>
 
-          <!-- Tiempo transcurrido -->
-          <div class="tiempo-info" *ngIf="pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'">
-            <ion-chip color="warning" class="tiempo-chip">
-              <ion-icon name="time-outline"></ion-icon>
-              <ion-label>
-                {{ formatDate(pedido.fechaCreacion) }}
-              </ion-label>
-            </ion-chip>
-          </div>
-
-          <!-- Botones de acción -->
-          <div class="action-buttons">
-            <ion-button 
-              fill="outline" 
-              size="small"
-              (click)="verDetallesPedido(pedido)">
-              <ion-icon name="eye-outline" slot="start"></ion-icon>
-              Ver Detalles
-            </ion-button>
-            
-            <ion-button 
-              fill="solid" 
-              size="small"
-              color="secondary"
-              (click)="cambiarEstadoPedido(pedido)"
-              *ngIf="pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'">
-              <ion-icon name="create-outline" slot="start"></ion-icon>
-              Cambiar Estado
-            </ion-button>
-            
-            <!-- Botones de acceso rápido -->
-            <ion-button 
-              fill="solid" 
-              size="small"
-              color="primary"
-              (click)="actualizarEstadoPedido(pedido, 'preparando')"
-              *ngIf="pedido.estado === 'pendiente'">
-              <ion-icon name="restaurant-outline" slot="start"></ion-icon>
-              Preparar
-            </ion-button>
-            
-            <ion-button 
-              fill="solid" 
-              size="small"
-              color="secondary"
-              (click)="actualizarEstadoPedido(pedido, 'enviado')"
-              *ngIf="pedido.estado === 'preparando'">
-              <ion-icon name="car-outline" slot="start"></ion-icon>
-              Enviar
-            </ion-button>
-            
-            <ion-button 
-              fill="solid" 
-              size="small"
-              color="success"
-              (click)="actualizarEstadoPedido(pedido, 'entregado')"
-              *ngIf="pedido.estado === 'enviado'">
-              <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
-              Entregar
-            </ion-button>
-          </div>
-        </ion-card-content>
-      </ion-card>
+            <!-- Botones de acción -->
+            <div class="action-buttons">
+              <ion-button 
+                fill="outline" 
+                size="small"
+                (click)="verDetallesPedido(pedido)">
+                <ion-icon name="eye-outline" slot="start"></ion-icon>
+                Ver Detalles
+              </ion-button>
+              
+              <ion-button 
+                fill="solid" 
+                size="small"
+                color="secondary"
+                (click)="cambiarEstadoPedido(pedido)"
+                *ngIf="getEstadoPedido(pedido) !== 'entregado' && getEstadoPedido(pedido) !== 'cancelado'">
+                <ion-icon name="create-outline" slot="start"></ion-icon>
+                Cambiar Estado
+              </ion-button>
+              
+              <!-- Botones de acceso rápido -->
+              <ion-button 
+                fill="solid" 
+                size="small"
+                color="primary"
+                (click)="actualizarEstadoPedido(pedido, 'preparando')"
+                *ngIf="getEstadoPedido(pedido) === 'pendiente'">
+                <ion-icon name="restaurant-outline" slot="start"></ion-icon>
+                Preparar
+              </ion-button>
+              
+              <ion-button 
+                fill="solid" 
+                size="small"
+                color="secondary"
+                (click)="actualizarEstadoPedido(pedido, 'enviado')"
+                *ngIf="getEstadoPedido(pedido) === 'preparando'">
+                <ion-icon name="car-outline" slot="start"></ion-icon>
+                Enviar
+              </ion-button>
+              
+              <ion-button 
+                fill="solid" 
+                size="small"
+                color="success"
+                (click)="actualizarEstadoPedido(pedido, 'entregado')"
+                *ngIf="getEstadoPedido(pedido) === 'enviado'">
+                <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+                Entregar
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </ng-container>
     </div>
   </div>
 
