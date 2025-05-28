@@ -174,7 +174,7 @@
                     {{ pizza.disponible ? 'Ocultar' : 'Mostrar' }}
                   </ion-button>
                   
-                  <ion-button fill="clear" size="small" color="primary">
+                  <ion-button fill="clear" size="small" color="primary" (click)="editPizza(pizza)">
                     <ion-icon name="create-outline" slot="start"></ion-icon>
                     Editar
                   </ion-button>
@@ -254,7 +254,7 @@
                     </ion-icon>
                   </ion-button>
                   
-                  <ion-button fill="clear" size="small" color="primary">
+                  <ion-button fill="clear" size="small" color="primary" (click)="editBebida(bebida)">
                     <ion-icon name="create-outline"></ion-icon>
                   </ion-button>
                   

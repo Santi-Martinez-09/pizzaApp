@@ -554,4 +554,9 @@ async updatePedido(pedidoId: string, data: Partial<Pedido>): Promise<void> {
     throw error;
   }
 }
+async updateBebida(id: string, bebida: Partial<Bebida>): Promise<void> {
+  const bebidaDoc = doc(this.firestore, 'bebidas', id);
+  await updateDoc(bebidaDoc, bebida);
+  console.log('PizzaService: Bebida actualizada:', id);
+}
 }

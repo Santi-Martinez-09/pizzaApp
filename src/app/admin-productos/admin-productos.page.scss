@@ -12,3 +12,16 @@
     --height: 95%;
   }
 }
+.edit-product-modal {
+  --width: 90%;
+  --max-width: 500px;
+  --height: 90%;
+  --border-radius: 16px;
+}
+
+@media (max-width: 768px) {
+  .edit-product-modal {
+    --width: 95%;
+    --height: 95%;
+  }
+}
