@@ -21,7 +21,7 @@ export class PayPalLoaderService {
     clientId: 'AbqotKe77My2Q-CA91Yar4U1ODuwWAUqZ_zpi_GZb0P5M7j5JhGu8u65XlWHC3Iq86C2IvNk0lkrwFoe',
     currency: 'USD',
     intent: 'capture',
-    locale: 'es_ES'
+    locale: 'es_US' 
   };
 
   constructor() {
