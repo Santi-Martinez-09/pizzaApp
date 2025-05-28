@@ -132,16 +132,6 @@ export class AppComponent implements OnInit {
         { title: 'Usuarios', url: '/admin-usuarios', icon: 'people' },
         { title: 'Estadísticas', url: '/admin-stats', icon: 'stats-chart' }
       ]
-    },
-    {
-      title: 'Soporte',
-      icon: 'help-circle-outline', 
-      color: 'tertiary',
-      pages: [
-        { title: 'Centro de Ayuda', url: '/help', icon: 'help-circle' },
-        { title: 'Contacto', url: '/contact', icon: 'mail' },
-        { title: 'Acerca de', url: '/about', icon: 'information-circle' }
-      ]
     }
   ];
 
