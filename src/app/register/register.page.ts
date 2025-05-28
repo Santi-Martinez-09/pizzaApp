@@ -257,38 +257,23 @@ export class RegisterPage implements OnInit {
   }
 
   // Mostrar mensaje de éxito
-  private async showSuccessMessage(displayName: string) {
-    const alert = await this.alertController.create({
-      header: '🎉 ¡Bienvenido!',
-      message: `
-        <div style="text-align: center; padding: 1rem;">
-          <h3 style="color: var(--ion-color-primary); margin-bottom: 1rem;">
-            ¡Hola ${displayName}! 👋
-          </h3>
-          <p style="line-height: 1.5; margin-bottom: 1rem;">
-            Tu cuenta ha sido creada exitosamente.<br>
-            ¡Ya puedes empezar a pedir tus pizzas favoritas!
-          </p>
-          <div style="background: var(--ion-color-light); padding: 0.75rem; border-radius: 8px; margin-top: 1rem;">
-            <small style="color: var(--ion-color-medium);">
-              🍕 Descubre nuestro menú<br>
-              🛒 Agrega productos al carrito<br>
-              💳 Paga fácil y seguro
-            </small>
-          </div>
-        </div>
-      `,
-      buttons: [
-        {
-          text: '¡Empezar a comprar! 🚀',
-          cssClass: 'primary-button'
-        }
-      ],
-      backdropDismiss: false
-    });
+private async showSuccessMessage(displayName: string) {
+  const alert = await this.alertController.create({
+    header: '🎉 ¡Bienvenido!',
+    message: `¡Hola ${displayName}!
 
-    await alert.present();
-  }
+Tu cuenta ha sido creada exitosamente.
+¡Ya puedes empezar a pedir tus pizzas favoritas!
+
+🍕 Descubre nuestro menú
+🛒 Agrega productos al carrito
+💳 Paga fácil y seguro`,
+    buttons: ['¡Empezar a comprar! 🚀'],
+    backdropDismiss: false
+  });
+
+  await alert.present();
+}
 
   // Marcar todos los campos como tocados para mostrar errores
   private markAllFieldsAsTouched() {

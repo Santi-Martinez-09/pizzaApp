@@ -36,18 +36,7 @@
     <p>Revisa el estado de tus pedidos</p>
   </div>
 
-  <!-- ✅ INFO DE DEBUG (solo visible durante desarrollo) -->
-  <ion-card *ngIf="hasDebugInfo()" color="light">
-  <ion-card-header>
-    <ion-card-title>🐛 Debug Info</ion-card-title>
-  </ion-card-header>
-  <ion-card-content>
-    <p><strong>Usuario:</strong> {{ debugInfo.userEmail }}</p>
-    <p><strong>UID:</strong> {{ debugInfo.userId }}</p>
-    <p><strong>Pedidos encontrados:</strong> {{ debugInfo.pedidosEncontrados }}</p>
-    <p><strong>Última actualización:</strong> {{ debugInfo.ultimaActualizacion }}</p>
-  </ion-card-content>
-</ion-card>
+
 
   <!-- Lista de pedidos vacía -->
   <div *ngIf="pedidos.length === 0 && !isLoading" class="empty-orders">
@@ -65,16 +54,6 @@
       <ion-button (click)="goToHome()" expand="block" fill="solid" class="order-now-btn">
         <ion-icon name="add-outline" slot="start"></ion-icon>
         Hacer mi primer pedido
-      </ion-button>
-      
-      <ion-button (click)="debugPedidos()" expand="block" fill="outline" color="secondary">
-        <ion-icon name="bug-outline" slot="start"></ion-icon>
-        🐛 Diagnosticar problema
-      </ion-button>
-      
-      <ion-button (click)="crearPedidoPrueba()" expand="block" fill="outline" color="tertiary">
-        <ion-icon name="add-outline" slot="start"></ion-icon>
-        🧪 Crear pedido de prueba
       </ion-button>
     </div>
   </div>
