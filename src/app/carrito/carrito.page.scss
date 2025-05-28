@@ -196,7 +196,7 @@ ion-list {
       padding: 0.75rem 0;
       font-size: 1rem;
       
-      &:not(:last-child) {
+      &:not(:last-child):not(.estimate-note) {
         border-bottom: 1px solid var(--ion-color-step-100);
       }
       
@@ -234,6 +234,25 @@ ion-list {
       }
     }
     
+    .estimate-note {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 0 0 0;
+      font-size: 0.9rem;
+      color: var(--ion-color-warning-shade);
+      background: var(--ion-color-warning-tint);
+      margin: 1rem -1rem 0 -1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      
+      ion-icon {
+        color: var(--ion-color-warning);
+        font-size: 1rem;
+        flex-shrink: 0;
+      }
+    }
+    
     hr {
       border: none;
       border-top: 2px solid var(--ion-color-step-150);
@@ -249,175 +268,48 @@ ion-list {
   flex-direction: column;
   gap: 1rem;
   
-  ion-button {
+  .continue-shopping-btn {
+    --color: var(--ion-color-primary);
+    --border-color: var(--ion-color-primary);
+    --border-width: 2px;
     --border-radius: 25px;
     font-weight: 600;
     height: 48px;
-    
-    &.continue-shopping-btn {
-      --color: var(--ion-color-primary);
-      --border-color: var(--ion-color-primary);
-      --border-width: 2px;
-    }
-    
-    &.checkout-btn {
-      --color: var(--ion-color-medium);
-      --border-color: var(--ion-color-medium);
-      opacity: 0.7;
-    }
   }
   
-  .payment-separator {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 1rem 0;
-    color: var(--ion-color-medium);
-    font-weight: 600;
-    
-    hr {
-      flex: 1;
-      border: none;
-      border-top: 1px solid var(--ion-color-step-200);
-    }
-    
-    span {
-      padding: 0 1rem;
-      font-size: 0.9rem;
-      color: var(--ion-color-primary);
-    }
-  }
-  
-  // PayPal Section Styles
-  .paypal-section {
-    background: linear-gradient(135deg, #f8f9ff, #e8f0ff);
-    border-radius: 16px;
-    padding: 1.5rem;
-    border: 2px solid #e3f2fd;
-    margin: 1rem 0;
-    
-    .paypal-title {
-      text-align: center;
-      color: var(--ion-color-primary);
+  .checkout-section {
+    .checkout-btn {
+      --border-radius: 25px;
       font-weight: 700;
-      font-size: 1.2rem;
-      margin-bottom: 1rem;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      height: 56px;
+      font-size: 1.1rem;
+      background: linear-gradient(45deg, var(--ion-color-primary), var(--ion-color-secondary));
+      --color: white;
+      box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.3);
+      
+      ion-icon {
+        font-size: 1.5rem;
+      }
     }
     
-    .debug-info {
-      background: rgba(255, 255, 255, 0.8);
-      border-radius: 12px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-left: 4px solid var(--ion-color-primary);
+    .checkout-info {
+      margin-top: 1rem;
+      text-align: center;
       
       p {
         margin: 0.25rem 0;
         font-size: 0.9rem;
-        color: var(--ion-color-dark);
+        color: var(--ion-color-medium-shade);
         
-        strong {
-          color: var(--ion-color-primary);
+        &:first-child {
+          color: var(--ion-color-success);
+          font-weight: 600;
         }
-      }
-    }
-    
-    .paypal-container {
-      background: white;
-      border-radius: 12px;
-      min-height: 80px;
-      border: 2px dashed #e0e0e0;
-      position: relative;
-      overflow: hidden;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
-      
-      // Loading state
-      .paypal-loading {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-        color: var(--ion-color-medium);
-        
-        ion-spinner {
-          margin-bottom: 1rem;
-        }
-        
-        p {
-          margin: 0;
-          font-weight: 500;
-        }
-      }
-      
-      // PayPal button styles
-      :deep(.paypal-buttons) {
-        .paypal-button {
-          border-radius: 8px !important;
-          overflow: hidden;
-        }
-        
-        .paypal-button-label-container {
-          border-radius: 8px !important;
-        }
-      }
-      
-      // Success state
-      &.paypal-ready {
-        border-color: #4CAF50;
-        border-style: solid;
-        
-        .paypal-loading {
-          display: none;
-        }
-      }
-      
-      // Error state
-      &.paypal-error {
-        border-color: var(--ion-color-danger);
-        background: #ffebee;
-        
-        .error-message {
-          text-align: center;
-          color: var(--ion-color-danger);
-          padding: 1rem;
-          
-          h4 {
-            margin-bottom: 0.5rem;
-            color: var(--ion-color-danger);
-          }
-          
-          button {
-            background: var(--ion-color-primary);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            
-            &:hover {
-              background: var(--ion-color-primary-shade);
-            }
-          }
-        }
-      }
-    }
-    
-    .manual-test {
-      margin-top: 1rem;
-      
-      ion-button {
-        --border-width: 2px;
-        --border-style: dashed;
-        height: 40px;
-        font-size: 0.9rem;
       }
     }
   }
   
-  .payment-info {
+  .cart-info {
     margin-top: 1rem;
     
     ion-card {
@@ -429,6 +321,9 @@ ion-list {
           font-size: 1rem;
           font-weight: 600;
           margin-bottom: 0.75rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
         }
         
         ul {
@@ -472,15 +367,6 @@ ion-list {
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
 ion-item-sliding {
   animation: slideInUp 0.3s ease-out;
 }
@@ -491,10 +377,6 @@ ion-item-sliding {
 
 .action-buttons {
   animation: fadeIn 0.5s ease-out;
-}
-
-.paypal-loading ion-spinner {
-  animation: pulse 2s infinite;
 }
 
 // Loading States
@@ -557,23 +439,12 @@ ion-item-sliding {
   .action-buttons {
     padding: 0.5rem;
     
-    .paypal-section {
-      padding: 1rem;
-      
-      .paypal-title {
-        font-size: 1.1rem;
-      }
-      
-      .debug-info {
-        padding: 0.75rem;
-        
-        p {
-          font-size: 0.8rem;
-        }
-      }
+    .checkout-section .checkout-btn {
+      height: 48px;
+      font-size: 1rem;
     }
     
-    .payment-info {
+    .cart-info {
       ion-card-content {
         h3 {
           font-size: 0.9rem;
@@ -610,18 +481,8 @@ ion-item-sliding {
     }
   }
   
-  .paypal-section {
-    .paypal-container {
-      min-height: 60px;
-      
-      .paypal-loading {
-        padding: 1rem;
-        
-        p {
-          font-size: 0.8rem;
-        }
-      }
-    }
+  .estimate-note {
+    font-size: 0.8rem;
   }
 }
 
@@ -629,8 +490,7 @@ ion-item-sliding {
 @media (prefers-reduced-motion: reduce) {
   ion-item-sliding,
   .order-summary,
-  .action-buttons,
-  .paypal-loading ion-spinner {
+  .action-buttons {
     animation: none;
   }
   
@@ -649,21 +509,12 @@ ion-item-sliding {
     border-color: var(--ion-color-step-200);
   }
   
-  .payment-info ion-card {
+  .cart-info ion-card {
     --background: var(--ion-color-step-50);
   }
   
-  .paypal-section {
-    background: linear-gradient(135deg, rgba(40, 44, 52, 0.8), rgba(33, 37, 41, 0.9));
-    border-color: var(--ion-color-step-200);
-    
-    .debug-info {
-      background: rgba(40, 44, 52, 0.8);
-    }
-    
-    .paypal-container {
-      background: var(--ion-color-step-50);
-      border-color: var(--ion-color-step-200);
-    }
+  .estimate-note {
+    background: rgba(var(--ion-color-warning-rgb), 0.2);
+    color: var(--ion-color-warning-shade);
   }
 }

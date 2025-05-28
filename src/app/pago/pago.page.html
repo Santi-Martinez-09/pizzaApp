@@ -1,13 +1,277 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>pago</ion-title>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/carrito"></ion-back-button>
+    </ion-buttons>
+    <ion-title>💳 Finalizar Compra</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">pago</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  <!-- Resumen del pedido -->
+  <ion-card class="order-summary">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="receipt-outline"></ion-icon>
+        Resumen de tu Pedido
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div class="items-list">
+        <div *ngFor="let item of carrito" class="item-row">
+          <span class="item-name">{{ item.item.nombre }}</span>
+          <span class="item-quantity">x{{ item.cantidad }}</span>
+          <span class="item-price">{{ formatPrice(item.precio * item.cantidad) }}</span>
+        </div>
+      </div>
+      
+      <hr>
+      
+      <div class="summary-row">
+        <span>Subtotal:</span>
+        <span>{{ formatPrice(subtotal) }}</span>
+      </div>
+      
+      <div class="summary-row">
+        <span>Domicilio:</span>
+        <span>{{ formatPrice(domicilio) }}</span>
+      </div>
+      
+      <div class="summary-row total-row">
+        <span><strong>Total:</strong></span>
+        <span><strong>{{ formatPrice(total) }}</strong></span>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Formulario de datos personales -->
+  <ion-card class="form-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="person-outline"></ion-icon>
+        Datos de Entrega
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <form #deliveryForm="ngForm">
+        <ion-item>
+          <ion-label position="floating">Nombre completo *</ion-label>
+          <ion-input 
+            type="text" 
+            [(ngModel)]="datosEntrega.nombre" 
+            name="nombre" 
+            required
+            [class.ion-invalid]="deliveryForm.submitted && !datosEntrega.nombre">
+          </ion-input>
+          <ion-note slot="error">El nombre es requerido</ion-note>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="floating">Teléfono *</ion-label>
+          <ion-input 
+            type="tel" 
+            [(ngModel)]="datosEntrega.telefono" 
+            name="telefono" 
+            required
+            placeholder="3001234567"
+            [class.ion-invalid]="deliveryForm.submitted && !datosEntrega.telefono">
+          </ion-input>
+          <ion-note slot="error">El teléfono es requerido</ion-note>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="floating">Dirección completa *</ion-label>
+          <ion-textarea 
+            [(ngModel)]="datosEntrega.direccion" 
+            name="direccion" 
+            required
+            rows="3"
+            placeholder="Ej: Carrera 70 # 53-40, Bogotá"
+            [class.ion-invalid]="deliveryForm.submitted && !datosEntrega.direccion">
+          </ion-textarea>
+          <ion-note slot="error">La dirección es requerida</ion-note>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="floating">Detalles adicionales</ion-label>
+          <ion-textarea 
+            [(ngModel)]="datosEntrega.detalles" 
+            name="detalles" 
+            rows="2"
+            placeholder="Torre, apartamento, referencias...">
+          </ion-textarea>
+        </ion-item>
+
+        <!-- Botón para calcular distancia -->
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          (click)="calcularDistancia()"
+          [disabled]="!datosEntrega.direccion || calculandoDistancia"
+          class="calculate-btn">
+          <ion-icon name="map-outline" slot="start"></ion-icon>
+          <span *ngIf="!calculandoDistancia">Calcular distancia y costo</span>
+          <span *ngIf="calculandoDistancia">
+            <ion-spinner name="crescent"></ion-spinner>
+            Calculando...
+          </span>
+        </ion-button>
+      </form>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Información de distancia -->
+  <ion-card *ngIf="distanciaInfo" class="distance-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="location-outline"></ion-icon>
+        Información de Entrega
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div class="distance-info">
+        <div class="info-item">
+          <ion-icon name="navigate-outline"></ion-icon>
+          <div>
+            <h4>Distancia:</h4>
+            <p>{{ distanciaInfo.distancia }}</p>
+          </div>
+        </div>
+        
+        <div class="info-item">
+          <ion-icon name="time-outline"></ion-icon>
+          <div>
+            <h4>Tiempo estimado:</h4>
+            <p>{{ distanciaInfo.duracion }}</p>
+          </div>
+        </div>
+        
+        <div class="info-item">
+          <ion-icon name="cash-outline"></ion-icon>
+          <div>
+            <h4>Costo de domicilio:</h4>
+            <p>{{ formatPrice(domicilioCalculado) }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Total actualizado -->
+      <div class="updated-total">
+        <h3>Total actualizado: {{ formatPrice(subtotal + domicilioCalculado) }}</h3>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Mapa -->
+  <ion-card *ngIf="mostrarMapa" class="map-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="map-outline"></ion-icon>
+        Ubicación de Entrega
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div id="map" class="map-container"></div>
+      
+      <div class="map-legend">
+        <div class="legend-item">
+          <div class="marker delivery-marker"></div>
+          <span>Tu dirección</span>
+        </div>
+        <div class="legend-item">
+          <div class="marker university-marker"></div>
+          <span>Universidad Libre</span>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Método de pago -->
+  <ion-card class="payment-method-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="card-outline"></ion-icon>
+        Método de Pago
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <ion-radio-group [(ngModel)]="metodoPagoSeleccionado">
+        <ion-item>
+          <ion-radio value="paypal" slot="start"></ion-radio>
+          <ion-label>
+            <h3>💳 PayPal</h3>
+            <p>Pago seguro y rápido</p>
+          </ion-label>
+        </ion-item>
+        
+        <ion-item>
+          <ion-radio value="efectivo" slot="start"></ion-radio>
+          <ion-label>
+            <h3>💵 Efectivo</h3>
+            <p>Pagar al recibir el pedido</p>
+          </ion-label>
+        </ion-item>
+      </ion-radio-group>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- PayPal Button Section -->
+  <div *ngIf="metodoPagoSeleccionado === 'paypal' && distanciaInfo" class="paypal-section">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>🌟 Pagar con PayPal</ion-card-title>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <div class="final-summary">
+          <p><strong>Total a pagar:</strong> {{ formatPrice(subtotal + domicilioCalculado) }}</p>
+          <p><strong>Equivalente USD:</strong> ${{ ((subtotal + domicilioCalculado) / 4000).toFixed(2) }}</p>
+        </div>
+        
+        <div 
+          id="paypal-payment-button" 
+          class="paypal-container"
+          style="min-height: 80px; border: 2px solid #007bff; border-radius: 8px; padding: 15px;">
+          
+          <div *ngIf="paypalStatus === 'loading'" class="paypal-loading">
+            <ion-spinner name="crescent" color="primary"></ion-spinner>
+            <p>Cargando PayPal...</p>
+          </div>
+          
+          <div *ngIf="paypalStatus === 'error'" class="paypal-error">
+            <h4>⚠️ Error con PayPal</h4>
+            <p>{{ paypalError }}</p>
+            <ion-button size="small" (click)="initializePayPal()">Reintentar</ion-button>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Botón para efectivo -->
+  <div *ngIf="metodoPagoSeleccionado === 'efectivo' && distanciaInfo" class="cash-payment">
+    <ion-button 
+      expand="block" 
+      size="large"
+      (click)="procesarPedidoEfectivo()"
+      class="cash-payment-btn">
+      <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+      Confirmar Pedido (Pago en Efectivo)
+    </ion-button>
+  </div>
+
+  <!-- Loading overlay -->
+  <div *ngIf="procesandoPedido" class="loading-overlay">
+    <div class="loading-content">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <h3>Procesando tu pedido...</h3>
+      <p>Por favor espera un momento</p>
+    </div>
+  </div>
+
 </ion-content>
