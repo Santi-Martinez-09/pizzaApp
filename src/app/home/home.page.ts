@@ -28,6 +28,7 @@ import {
   IonFabButton,
   IonRefresher,
   IonRefresherContent,
+  IonSpinner,
   ToastController,
   LoadingController
 } from '@ionic/angular/standalone';
@@ -37,16 +38,22 @@ import {
   basketOutline,
   pizzaOutline,
   cafeOutline,
-  refreshOutline
+  refreshOutline,
+  cloudOutline,
+  sunnyOutline,
+  rainyOutline,
+  snowOutline,
+  thunderstormOutline,
+  partlySunnyOutline
 } from 'ionicons/icons';
 import { PizzaService, Pizza, Bebida, ItemCarrito } from '../services/pizza/pizza.service';
+import { WeatherService } from '../services/weather.service';
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  // REMOVIDO: providers: [PizzaService] - esto causaba instancias múltiples
   imports: [
     CommonModule,
     IonicModule,
@@ -74,7 +81,8 @@ import { PizzaService, Pizza, Bebida, ItemCarrito } from '../services/pizza/pizz
     IonFab,
     IonFabButton,
     IonRefresher,
-    IonRefresherContent
+    IonRefresherContent,
+    IonSpinner
   ]
 })
 export class HomePage implements OnInit {
@@ -84,8 +92,15 @@ export class HomePage implements OnInit {
   carritoCount: number = 0;
   isLoading: boolean = false;
 
+  // Propiedades del clima
+  weatherData: any = null;
+  weatherLoading: boolean = false;
+  weatherError: string = '';
+  ciudad: string = 'Bogotá';
+
   constructor(
     private pizzaService: PizzaService,
+    private weatherService: WeatherService,
     private router: Router,
     private toastController: ToastController,
     private loadingController: LoadingController
@@ -95,13 +110,20 @@ export class HomePage implements OnInit {
       basketOutline,
       pizzaOutline,
       cafeOutline,
-      refreshOutline
+      refreshOutline,
+      cloudOutline,
+      sunnyOutline,
+      rainyOutline,
+      snowOutline,
+      thunderstormOutline,
+      partlySunnyOutline
     });
   }
 
   async ngOnInit() {
     console.log('HomePage: Iniciando...');
     await this.loadData();
+    await this.loadWeather();
     
     // Suscribirse a cambios del carrito
     this.pizzaService.carrito$.subscribe(carrito => {
@@ -140,6 +162,47 @@ export class HomePage implements OnInit {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  // Cargar información del clima
+  async loadWeather() {
+    this.weatherLoading = true;
+    this.weatherError = '';
+    
+    try {
+      console.log('HomePage: Cargando clima para:', this.ciudad);
+      
+      this.weatherData = await this.weatherService.obtenerClima(this.ciudad).toPromise();
+      console.log('HomePage: Datos del clima obtenidos:', this.weatherData);
+      
+    } catch (error) {
+      console.error('Error cargando clima:', error);
+      this.weatherError = 'No se pudo cargar el clima';
+      this.weatherData = null;
+    } finally {
+      this.weatherLoading = false;
+    }
+  }
+
+  // Obtener icono del clima basado en el código
+  getWeatherIcon(weatherMain: string): string {
+    const iconMap: { [key: string]: string } = {
+      'Clear': 'sunny-outline',
+      'Clouds': 'cloud-outline', 
+      'Rain': 'rainy-outline',
+      'Drizzle': 'rainy-outline',
+      'Thunderstorm': 'thunderstorm-outline',
+      'Snow': 'snow-outline',
+      'Mist': 'cloud-outline',
+      'Fog': 'cloud-outline'
+    };
+    
+    return iconMap[weatherMain] || 'partly-sunny-outline';
+  }
+
+  // Formatear temperatura
+  formatTemperature(temp: number): string {
+    return Math.round(temp) + '°C';
   }
 
   formatPrice(price: number): string {
@@ -237,10 +300,10 @@ export class HomePage implements OnInit {
   async refreshData(event: any) {
     console.log('HomePage: Refrescando datos...');
     try {
-      await this.loadData();
-      this.presentToast('Productos actualizados', 'success');
+      await Promise.all([this.loadData(), this.loadWeather()]);
+      this.presentToast('Datos actualizados', 'success');
     } catch (error) {
-      this.presentToast('Error actualizando productos', 'danger');
+      this.presentToast('Error actualizando datos', 'danger');
     } finally {
       event.target.complete();
     }

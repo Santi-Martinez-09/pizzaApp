@@ -20,6 +20,73 @@
     <p>Entrega rápida y ingredientes frescos</p>
   </div>
 
+  <!-- Sección del Clima -->
+  <ion-card class="weather-card">
+    <ion-card-content>
+      <!-- Loading state -->
+      <div *ngIf="weatherLoading" class="weather-loading">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <span>Cargando clima...</span>
+      </div>
+
+      <!-- Error state -->
+      <div *ngIf="weatherError && !weatherLoading" class="weather-error">
+        <ion-icon name="cloud-outline" color="medium"></ion-icon>
+        <span>{{ weatherError }}</span>
+        <ion-button fill="clear" size="small" (click)="loadWeather()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Reintentar
+        </ion-button>
+      </div>
+
+      <!-- Weather data -->
+      <div *ngIf="weatherData && !weatherLoading && !weatherError" class="weather-info">
+        <div class="weather-main">
+          <div class="weather-location">
+            <ion-icon name="location-outline"></ion-icon>
+            <span class="city-name">{{ ciudad }}</span>
+          </div>
+          
+          <div class="weather-details">
+            <div class="temperature-section">
+              <ion-icon 
+                [name]="getWeatherIcon(weatherData.weather[0].main)" 
+                class="weather-icon"
+                [color]="weatherData.weather[0].main === 'Clear' ? 'warning' : 'primary'">
+              </ion-icon>
+              <span class="temperature">{{ formatTemperature(weatherData.main.temp) }}</span>
+            </div>
+            
+            <div class="weather-description">
+              <span class="condition">{{ weatherData.weather[0].description | titlecase }}</span>
+              <span class="feels-like">Sensación: {{ formatTemperature(weatherData.main.feels_like) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="weather-extra">
+          <div class="weather-stat">
+            <ion-icon name="water-outline"></ion-icon>
+            <span>{{ weatherData.main.humidity }}%</span>
+            <small>Humedad</small>
+          </div>
+          
+          <div class="weather-stat">
+            <ion-icon name="speedometer-outline"></ion-icon>
+            <span>{{ weatherData.wind.speed }} m/s</span>
+            <small>Viento</small>
+          </div>
+          
+          <div class="weather-stat">
+            <ion-icon name="eye-outline"></ion-icon>
+            <span>{{ (weatherData.visibility / 1000).toFixed(1) }} km</span>
+            <small>Visibilidad</small>
+          </div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
   <!-- Selector de categorías -->
   <div class="category-selector">
     <ion-segment [(ngModel)]="categoriaSeleccionada" (ionChange)="onCategoriaChange($event)" color="primary">
@@ -38,7 +105,7 @@
       pullingIcon="refresh-outline"
       pullingText="Desliza para actualizar"
       refreshingSpinner="crescent"
-      refreshingText="Actualizando productos...">
+      refreshingText="Actualizando datos...">
     </ion-refresher-content>
   </ion-refresher>
 
