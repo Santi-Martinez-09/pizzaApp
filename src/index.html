@@ -17,7 +17,11 @@
   <!-- add to homescreen for ios -->
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <script src="https://www.paypal.com/sdk/js?client-id=EMtwIRygs2Ts81JfdtqiHEV5OxM9yt9fktrZ3Ryv5KinkYK7gs803RyjRXAE2_UwKxVWzSktDCSzK3Ki"></script>
+  <script 
+  src="https://www.paypal.com/sdk/js?client-id=EMtwIRygs2Ts81JfdtqiHEV5OxM9yt9fktrZ3Ryv5KinkYK7gs803RyjRXAE2_UwKxVWzSktDCSzK3Ki&currency=USD"
+  onload="console.log('PayPal SDK cargado correctamente')"
+  onerror="console.error('Error cargando PayPal SDK')">
+</script>
 
 </head>
 
