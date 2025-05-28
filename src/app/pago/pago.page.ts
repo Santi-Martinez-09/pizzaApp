@@ -542,7 +542,7 @@ script.src = `https://maps.googleapis.com/maps/api/js?key=${environment.googleMa
           }],
           application_context: {
             brand_name: 'PizzaApp',
-            locale: 'es_ES',
+            locale: 'es-ES',
             landing_page: 'BILLING',
             shipping_preference: 'NO_SHIPPING',
             user_action: 'PAY_NOW'
