@@ -35,7 +35,9 @@ import {
   callOutline,
   restaurantOutline,
   carOutline,
-  eyeOutline
+  eyeOutline,
+  bugOutline,
+  addOutline
 } from 'ionicons/icons';
 import { AuthService } from '../services/auth.service';
 import { PizzaService, Pedido, ItemCarrito } from '../services/pizza/pizza.service';
@@ -45,7 +47,6 @@ import { PizzaService, Pedido, ItemCarrito } from '../services/pizza/pizza.servi
   templateUrl: './pedidos.page.html',
   styleUrls: ['./pedidos.page.scss'],
   standalone: true,
-  // REMOVIDO: providers locales que causaban problemas
   imports: [
     CommonModule,
     IonHeader,
@@ -72,6 +73,7 @@ import { PizzaService, Pedido, ItemCarrito } from '../services/pizza/pizza.servi
 export class PedidosPage implements OnInit {
   pedidos: Pedido[] = [];
   isLoading: boolean = false;
+  debugInfo: any = {};
 
   constructor(
     private authService: AuthService,
@@ -90,11 +92,14 @@ export class PedidosPage implements OnInit {
       callOutline,
       restaurantOutline,
       carOutline,
-      eyeOutline
+      eyeOutline,
+      bugOutline,
+      addOutline
     });
   }
 
   async ngOnInit() {
+    console.log('🔍 PEDIDOS PAGE: Iniciando ngOnInit');
     await this.loadPedidos();
   }
 
@@ -102,19 +107,308 @@ export class PedidosPage implements OnInit {
     this.isLoading = true;
     
     try {
+      console.log('🔍 LOAD PEDIDOS: Iniciando carga...');
+      
       const currentUser = this.authService.getCurrentUser();
+      const userProfile = this.authService.getUserProfile();
+      
+      // ✅ DEBUG DETALLADO DEL USUARIO
+      console.log('🔍 USUARIO DEBUG:', {
+        firebaseUser: currentUser ? {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName
+        } : null,
+        userProfile: userProfile ? {
+          uid: userProfile.uid,
+          email: userProfile.email,
+          displayName: userProfile.displayName,
+          role: userProfile.role
+        } : null,
+        isLoggedIn: this.authService.isLoggedIn()
+      });
+      
       if (currentUser) {
+        console.log('🔍 BUSCANDO PEDIDOS para userId:', currentUser.uid);
+        
+        // Buscar pedidos del usuario
         this.pedidos = await this.pizzaService.getPedidosByUser(currentUser.uid);
-        console.log('Pedidos cargados:', this.pedidos.length);
+        
+        console.log('🔍 PEDIDOS ENCONTRADOS:', this.pedidos.length);
+        console.log('🔍 PEDIDOS DATA:', this.pedidos);
+        
+        // Si no hay pedidos, hacer debug adicional
+        if (this.pedidos.length === 0) {
+          await this.debugNoPedidos(currentUser.uid);
+        }
+        
+        // Actualizar debug info
+        this.debugInfo = {
+          userId: currentUser.uid,
+          userEmail: currentUser.email,
+          pedidosEncontrados: this.pedidos.length,
+          ultimaActualizacion: new Date().toLocaleTimeString()
+        };
+        
+      } else {
+        console.error('❌ Usuario no autenticado');
+        this.presentToast('Usuario no autenticado', 'danger');
+        this.router.navigate(['/login']);
       }
     } catch (error) {
-      console.error('Error cargando pedidos:', error);
-      this.presentToast('Error cargando pedidos', 'danger');
+      console.error('❌ Error cargando pedidos:', error);
+      this.presentToast('Error cargando pedidos: ' + error, 'danger');
     } finally {
       this.isLoading = false;
       if (event) {
         event.target.complete();
       }
+    }
+  }
+
+  // ✅ DEBUG CUANDO NO HAY PEDIDOS
+  private async debugNoPedidos(userId: string) {
+    try {
+      console.log('🔍 DEBUG NO PEDIDOS: Investigando...');
+      
+      // Obtener TODOS los pedidos para comparar
+      const todosPedidos = await this.pizzaService.getAllPedidos();
+      console.log('🔍 TOTAL PEDIDOS EN BD:', todosPedidos.length);
+      
+      if (todosPedidos.length > 0) {
+        console.log('🔍 ANÁLISIS DE PEDIDOS:');
+        todosPedidos.forEach((pedido, index) => {
+          console.log(`  Pedido ${index + 1}:`, {
+            id: pedido.id,
+            userId: pedido.userId,
+            userIdTipo: typeof pedido.userId,
+            userIdActualTipo: typeof userId,
+            coincide: pedido.userId === userId,
+            fecha: pedido.fechaCreacion,
+            total: pedido.total,
+            estado: pedido.estado
+          });
+        });
+        
+        // Filtrar manualmente para ver qué pasa
+        const pedidosManual = todosPedidos.filter(p => p.userId === userId);
+        console.log('🔍 FILTRO MANUAL RESULT:', pedidosManual.length, 'pedidos');
+        
+        // Verificar si hay pedidos con userId similar
+        const pedidosSimilares = todosPedidos.filter(p => 
+          p.userId && p.userId.includes(userId.substring(0, 10))
+        );
+        console.log('🔍 PEDIDOS CON userId SIMILAR:', pedidosSimilares.length);
+        
+      } else {
+        console.log('🔍 NO HAY PEDIDOS EN LA BASE DE DATOS');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en debug no pedidos:', error);
+    }
+  }
+
+  // ✅ MÉTODO DE DEBUG COMPLETO
+  async debugPedidos() {
+    const alert = await this.alertController.create({
+      header: '🐛 DEBUG: Información de Pedidos',
+      message: 'Iniciando diagnóstico completo...',
+      buttons: ['OK']
+    });
+    await alert.present();
+
+    const currentUser = this.authService.getCurrentUser();
+    const userProfile = this.authService.getUserProfile();
+    
+    console.log('🔍 === DEBUG PEDIDOS COMPLETO ===');
+    console.log('Timestamp:', new Date().toISOString());
+    
+    if (!currentUser) {
+      console.log('❌ ERROR: No hay usuario autenticado');
+      this.presentToast('No hay usuario autenticado', 'danger');
+      return;
+    }
+
+    try {
+      // 1. INFO DEL USUARIO
+      console.log('👤 USUARIO INFO:');
+      console.log('  Firebase User:', {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+        emailVerified: currentUser.emailVerified
+      });
+      console.log('  User Profile:', userProfile);
+      
+      // 2. CONSULTA DIRECTA
+      console.log('📊 CONSULTA DIRECTA:');
+      const pedidosUsuario = await this.pizzaService.getPedidosByUser(currentUser.uid);
+      console.log('  Pedidos del usuario:', pedidosUsuario.length);
+      
+      // 3. TODOS LOS PEDIDOS
+      console.log('📋 TODOS LOS PEDIDOS:');
+      const todosPedidos = await this.pizzaService.getAllPedidos();
+      console.log('  Total en BD:', todosPedidos.length);
+      
+      // 4. ANÁLISIS DETALLADO
+      if (todosPedidos.length > 0) {
+        console.log('🔍 ANÁLISIS DETALLADO:');
+        
+        const pedidosDelUsuario = todosPedidos.filter(p => p.userId === currentUser.uid);
+        console.log('  Filtrados por UID exacto:', pedidosDelUsuario.length);
+        
+        const pedidosConUserId = todosPedidos.filter(p => p.userId);
+        console.log('  Con userId definido:', pedidosConUserId.length);
+        
+        // Mostrar todos los userIds únicos
+        const userIds = [...new Set(todosPedidos.map(p => p.userId).filter(Boolean))];
+        console.log('  UserIds únicos encontrados:', userIds);
+        console.log('  Mi userId:', currentUser.uid);
+        console.log('  Mi userId está en la lista:', userIds.includes(currentUser.uid));
+        
+        // Mostrar detalles de cada pedido
+        todosPedidos.forEach((pedido, index) => {
+          console.log(`  Pedido ${index + 1}:`, {
+            id: pedido.id?.substring(0, 8) || 'sin-id',
+            userId: pedido.userId || 'sin-userId',
+            esDelUsuario: pedido.userId === currentUser.uid,
+            fecha: pedido.fechaCreacion,
+            estado: pedido.estado,
+            total: pedido.total,
+            items: pedido.items?.length || 0
+          });
+        });
+        
+      } else {
+        console.log('❌ NO HAY PEDIDOS EN LA BASE DE DATOS');
+        this.presentToast('No hay pedidos en la base de datos', 'warning');
+      }
+      
+      // 5. VERIFICAR CONEXIÓN FIRESTORE
+      console.log('🔗 VERIFICACIÓN FIRESTORE:');
+      try {
+        await this.pizzaService.getAllPedidos();
+        console.log('  ✅ Conexión a Firestore OK');
+      } catch (firestoreError) {
+        console.log('  ❌ Error conexión Firestore:', firestoreError);
+      }
+      
+      // 6. RESUMEN
+      console.log('📋 RESUMEN:');
+      console.log('  Usuario autenticado:', !!currentUser);
+      console.log('  UID del usuario:', currentUser.uid);
+      console.log('  Pedidos en BD:', todosPedidos.length);
+      console.log('  Pedidos del usuario:', pedidosUsuario.length);
+      console.log('  Estado del componente:', {
+        isLoading: this.isLoading,
+        pedidosEnVista: this.pedidos.length
+      });
+      
+      console.log('🔍 === FIN DEBUG ===');
+      
+      // Mostrar alerta con resumen
+      const resumen = await this.alertController.create({
+        header: '📊 Resumen del Debug',
+        message: `
+          <div style="text-align: left;">
+            <p><strong>Usuario:</strong> ${currentUser.email}</p>
+            <p><strong>UID:</strong> ${currentUser.uid}</p>
+            <p><strong>Total pedidos en BD:</strong> ${todosPedidos.length}</p>
+            <p><strong>Pedidos del usuario:</strong> ${pedidosUsuario.length}</p>
+            <p><strong>Estado carga:</strong> ${this.isLoading ? 'Cargando' : 'Completado'}</p>
+            <hr>
+            <p style="font-size: 0.9em; color: #666;">
+              Revisa la consola (F12) para ver los detalles completos
+            </p>
+          </div>
+        `,
+        buttons: ['Cerrar']
+      });
+      await resumen.present();
+      
+    } catch (error) {
+      console.error('❌ Error en debug completo:', error);
+      this.presentToast('Error en debug: ' + error, 'danger');
+    }
+  }
+
+  // ✅ CREAR PEDIDO DE PRUEBA
+  async crearPedidoPrueba() {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) {
+      this.presentToast('No hay usuario autenticado', 'danger');
+      return;
+    }
+
+    const confirm = await this.alertController.create({
+      header: '🧪 Crear Pedido de Prueba',
+      message: '¿Quieres crear un pedido de prueba para verificar que funciona el guardado?',
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Crear',
+          handler: async () => {
+            await this.realizarPedidoPrueba(currentUser.uid);
+          }
+        }
+      ]
+    });
+    await confirm.present();
+  }
+
+  private async realizarPedidoPrueba(userId: string) {
+    try {
+      console.log('🧪 Creando pedido de prueba para:', userId);
+
+      const pedidoPrueba = {
+        userId: userId,
+        items: [
+          {
+            id: 'test-item-1',
+            tipo: 'pizza' as const,
+            item: {
+              id: 'pizza-test',
+              nombre: 'Pizza de Prueba',
+              descripcion: 'Pedido de prueba para debug',
+              precio: 25000,
+              ingredientes: ['Queso', 'Tomate'],
+              categoria: 'clasica' as const,
+              disponible: true,
+              tamano: 'mediana' as const
+            },
+            cantidad: 1,
+            precio: 25000
+          }
+        ],
+        total: 30000,
+        domicilio: 5000,
+        direccion: 'Dirección de prueba',
+        telefono: '3001234567',
+        estado: 'pendiente' as const,
+        fechaCreacion: new Date(),
+        metodoPago: 'prueba',
+        datosEntrega: {
+          nombre: 'Usuario de Prueba',
+          telefono: '3001234567',
+          direccion: 'Dirección de prueba',
+          detalles: 'Pedido creado para debug'
+        }
+      };
+
+      const pedidoId = await this.pizzaService.crearPedido(pedidoPrueba);
+      console.log('✅ Pedido de prueba creado:', pedidoId);
+      
+      this.presentToast('Pedido de prueba creado: ' + pedidoId, 'success');
+      
+      // Recargar pedidos
+      setTimeout(() => {
+        this.loadPedidos();
+      }, 1000);
+
+    } catch (error) {
+      console.error('❌ Error creando pedido de prueba:', error);
+      this.presentToast('Error creando pedido de prueba: ' + error, 'danger');
     }
   }
 
@@ -126,17 +420,27 @@ export class PedidosPage implements OnInit {
     }).format(price);
   }
 
-  formatDate(date: Date): string {
+  formatDate(date: Date | any): string {
     if (!date) return 'Sin fecha';
     
-    const dateObj = date instanceof Date ? date : new Date(date);
-    return dateObj.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const dateObj = date instanceof Date ? date : 
+                     date.toDate ? date.toDate() : 
+                     new Date(date);
+      
+      if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+      
+      return dateObj.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Error en fecha';
+    }
   }
 
   getEstadoBadgeColor(estado: string): string {
@@ -220,8 +524,10 @@ export class PedidosPage implements OnInit {
     const methods: { [key: string]: string } = {
       'paypal': 'PayPal',
       'payu': 'Tarjeta de crédito',
+      'efectivo': 'Efectivo',
       'cash': 'Efectivo',
-      'bank_transfer': 'Transferencia bancaria'
+      'bank_transfer': 'Transferencia bancaria',
+      'prueba': '🧪 Pedido de Prueba'
     };
     return methods[method] || method;
   }
@@ -346,5 +652,8 @@ export class PedidosPage implements OnInit {
       color
     });
     await toast.present();
+  }
+  hasDebugInfo(): boolean {
+    return this.debugInfo && Object.keys(this.debugInfo).length > 0;
   }
 }

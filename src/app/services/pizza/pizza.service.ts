@@ -284,59 +284,116 @@ export class PizzaService {
   }
 
   // PEDIDOS
-  async crearPedido(pedido: Omit<Pedido, 'id'>): Promise<string> {
-    try {
-      const pedidosCollection = collection(this.firestore, 'pedidos');
-      const docRef = await addDoc(pedidosCollection, {
-        ...pedido,
-        fechaCreacion: new Date()
+async crearPedido(pedido: Omit<Pedido, 'id'>): Promise<string> {
+  try {
+    console.log('🔍 PIZZA SERVICE - CREAR PEDIDO:');
+    console.log('  userId recibido:', `"${pedido.userId}"`);
+    console.log('  userId tipo:', typeof pedido.userId);
+    console.log('  userId length:', pedido.userId?.length);
+    
+    const pedidosCollection = collection(this.firestore, 'pedidos');
+    const docRef = await addDoc(pedidosCollection, {
+      ...pedido,
+      userId: pedido.userId, // ✅ Asegurar que se guarde
+      fechaCreacion: new Date()
+    });
+    
+    console.log('✅ PIZZA SERVICE: Pedido creado con ID:', docRef.id);
+    console.log('✅ PIZZA SERVICE: userId guardado:', `"${pedido.userId}"`);
+    
+    // Limpiar carrito después de crear pedido exitosamente
+    this.limpiarCarrito();
+    
+    return docRef.id;
+  } catch (error) {
+    console.error('❌ PIZZA SERVICE: Error creando pedido:', error);
+    throw error;
+  }
+}
+
+async getPedidosByUser(userId: string): Promise<Pedido[]> {
+  try {
+    console.log('🔍 PIZZA SERVICE - GET PEDIDOS BY USER:');
+    console.log('  userId buscado:', `"${userId}"`);
+    console.log('  userId tipo:', typeof userId);
+    console.log('  userId length:', userId?.length);
+    
+    const pedidosCollection = collection(this.firestore, 'pedidos');
+    const q = query(
+      pedidosCollection, 
+      where('userId', '==', userId),
+      orderBy('fechaCreacion', 'desc')
+    );
+    
+    const pedidosSnapshot = await getDocs(q);
+    console.log('🔍 PIZZA SERVICE: Documentos encontrados en query:', pedidosSnapshot.size);
+    
+    const pedidos: Pedido[] = [];
+    pedidosSnapshot.forEach((doc) => {
+      const data = doc.data();
+      console.log('🔍 PIZZA SERVICE: Documento encontrado:', {
+        id: doc.id,
+        userId: `"${data['userId']}"`,
+        userIdTipo: typeof data['userId'],
+        coincide: data['userId'] === userId,
+        fechaCreacion: data['fechaCreacion'],
+        total: data['total']
       });
       
-      console.log('PizzaService: Pedido creado con ID:', docRef.id);
-      
-      // Limpiar carrito después de crear pedido exitosamente
-      this.limpiarCarrito();
-      
-      return docRef.id;
-    } catch (error) {
-      console.error('PizzaService: Error creando pedido:', error);
-      throw error;
-    }
-  }
-
-  async getPedidosByUser(userId: string): Promise<Pedido[]> {
-    try {
-      const pedidosCollection = collection(this.firestore, 'pedidos');
-      const q = query(
-        pedidosCollection, 
-        where('userId', '==', userId),
-        orderBy('fechaCreacion', 'desc')
-      );
-      const pedidosSnapshot = await getDocs(q);
-      return pedidosSnapshot.docs.map(doc => ({
+      pedidos.push({
         id: doc.id,
-        ...doc.data()
-      })) as Pedido[];
-    } catch (error) {
-      console.error('PizzaService: Error obteniendo pedidos del usuario:', error);
-      return [];
-    }
+        ...data
+      } as Pedido);
+    });
+    
+    console.log('✅ PIZZA SERVICE: Pedidos procesados:', pedidos.length);
+    return pedidos;
+  } catch (error) {
+    console.error('❌ PIZZA SERVICE: Error obteniendo pedidos del usuario:', error);
+    console.error('❌ PIZZA SERVICE: Error completo:', error);
+    return [];
   }
+}
 
-  async getAllPedidos(): Promise<Pedido[]> {
-    try {
-      const pedidosCollection = collection(this.firestore, 'pedidos');
-      const q = query(pedidosCollection, orderBy('fechaCreacion', 'desc'));
-      const pedidosSnapshot = await getDocs(q);
-      return pedidosSnapshot.docs.map(doc => ({
+async getAllPedidos(): Promise<Pedido[]> {
+  try {
+    console.log('🔍 PIZZA SERVICE - GET ALL PEDIDOS:');
+    
+    const pedidosCollection = collection(this.firestore, 'pedidos');
+    const q = query(pedidosCollection, orderBy('fechaCreacion', 'desc'));
+    const pedidosSnapshot = await getDocs(q);
+    
+    console.log('🔍 PIZZA SERVICE: Total documentos en colección:', pedidosSnapshot.size);
+    
+    const pedidos: Pedido[] = [];
+    pedidosSnapshot.forEach((doc) => {
+      const data = doc.data();
+      console.log('🔍 PIZZA SERVICE: Pedido en BD:', {
         id: doc.id,
-        ...doc.data()
-      })) as Pedido[];
-    } catch (error) {
-      console.error('PizzaService: Error obteniendo todos los pedidos:', error);
-      return [];
-    }
+        userId: `"${data['userId']}"`,
+        userIdTipo: typeof data['userId'],
+        userIdLength: data['userId']?.length,
+        fechaCreacion: data['fechaCreacion'],
+        total: data['total'],
+        estado: data['estado']
+      });
+      
+      pedidos.push({
+        id: doc.id,
+        ...data
+      } as Pedido);
+    });
+    
+    // Mostrar resumen de userIds únicos
+    const userIds = [...new Set(pedidos.map(p => p.userId).filter(Boolean))];
+    console.log('🔍 PIZZA SERVICE: UserIds únicos encontrados:', userIds);
+    
+    return pedidos;
+  } catch (error) {
+    console.error('❌ PIZZA SERVICE: Error obteniendo todos los pedidos:', error);
+    return [];
   }
+}
 
   async updatePedidoEstado(pedidoId: string, estado: Pedido['estado']): Promise<void> {
     try {
@@ -483,4 +540,18 @@ export class PizzaService {
       await this.addIngrediente(ingrediente);
     }
   }
+  // ✅ MÉTODO NUEVO - Agregar este método
+async updatePedido(pedidoId: string, data: Partial<Pedido>): Promise<void> {
+  try {
+    console.log('🔍 PIZZA SERVICE - UPDATE PEDIDO:', pedidoId, data);
+    
+    const pedidoDoc = doc(this.firestore, 'pedidos', pedidoId);
+    await updateDoc(pedidoDoc, data);
+    
+    console.log('✅ PIZZA SERVICE: Pedido actualizado:', pedidoId);
+  } catch (error) {
+    console.error('❌ PIZZA SERVICE: Error actualizando pedido:', error);
+    throw error;
+  }
+}
 }
