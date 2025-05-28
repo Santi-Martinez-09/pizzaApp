@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { EditPizzaModalComponent, EditBebidaModalComponent } from '../components/editProduct/edit-product-modals.component';
 // Agregar estas líneas al inicio del archivo (después de las importaciones existentes)
 import { AddPizzaModalComponent, AddBebidaModalComponent } from '../components/agregarProducto/add-product-modals.component';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
@@ -475,104 +474,4 @@ private async handleAddBebida(bebidaData: any) {
     });
     await toast.present();
   }
-  // Método para editar pizza
-async editPizza(pizza: Pizza) {
-  const modal = await this.modalController.create({
-    component: EditPizzaModalComponent,
-    cssClass: 'edit-product-modal',
-    componentProps: {
-      pizza: pizza
-    }
-  });
-
-  modal.onDidDismiss().then(async (result) => {
-    if (result.data && result.data.pizza) {
-      await this.handleUpdatePizza(pizza.id!, result.data.pizza);
-    }
-  });
-
-  await modal.present();
-}
-
-// Método para editar bebida
-async editBebida(bebida: Bebida) {
-  const modal = await this.modalController.create({
-    component: EditBebidaModalComponent,
-    cssClass: 'edit-product-modal',
-    componentProps: {
-      bebida: bebida
-    }
-  });
-
-  modal.onDidDismiss().then(async (result) => {
-    if (result.data && result.data.bebida) {
-      await this.handleUpdateBebida(bebida.id!, result.data.bebida);
-    }
-  });
-
-  await modal.present();
-}
-
-// Manejar actualización de pizza
-private async handleUpdatePizza(pizzaId: string, pizzaData: any) {
-  const loading = await this.loadingController.create({
-    message: 'Actualizando pizza...',
-    spinner: 'crescent'
-  });
-  await loading.present();
-
-  try {
-    const updatedPizza = {
-      nombre: pizzaData.nombre,
-      descripcion: pizzaData.descripcion,
-      precio: pizzaData.precio,
-      ingredientes: pizzaData.ingredientes,
-      categoria: pizzaData.categoria,
-      tamano: pizzaData.tamano,
-      imagen: pizzaData.imagen || '',
-      disponible: pizzaData.disponible
-    };
-
-    await this.pizzaService.updatePizza(pizzaId, updatedPizza);
-    await this.loadData();
-    await loading.dismiss();
-    
-    this.presentToast(`🍕 ${updatedPizza.nombre} actualizada exitosamente`, 'success');
-    
-  } catch (error) {
-    await loading.dismiss();
-    console.error('Error actualizando pizza:', error);
-    this.presentToast('Error actualizando la pizza', 'danger');
-  }
-}
-
-// Manejar actualización de bebida
-private async handleUpdateBebida(bebidaId: string, bebidaData: any) {
-  const loading = await this.loadingController.create({
-    message: 'Actualizando bebida...',
-    spinner: 'crescent'
-  });
-  await loading.present();
-
-  try {
-    const updatedBebida = {
-      nombre: bebidaData.nombre,
-      precio: bebidaData.precio,
-      tamano: bebidaData.tamano,
-      imagen: bebidaData.imagen || '',
-      disponible: bebidaData.disponible
-    };
-
-    await this.pizzaService.updateBebida(bebidaId, updatedBebida);
-    await this.loadData();
-    await loading.dismiss();
-    
-    this.presentToast(`🥤 ${updatedBebida.nombre} actualizada exitosamente`, 'success');
-    
-  } catch (error) {
-    await loading.dismiss();
-    console.error('Error actualizando bebida:', error);
-    this.presentToast('Error actualizando la bebida', 'danger');
-  }
-}
 }
