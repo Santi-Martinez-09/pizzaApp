@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/home"></ion-back-button>
     </ion-buttons>
-    <ion-title>Mi Carrito</ion-title>
+    <ion-title>🛒 Mi Carrito</ion-title>
     <ion-buttons slot="end" *ngIf="tieneItems()">
       <ion-button fill="clear" (click)="limpiarCarrito()">
         <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
@@ -78,7 +78,10 @@
       
       <ion-card-content>
         <div class="summary-row">
-          <span>Subtotal ({{ carrito.length }} items)</span>
+          <span>
+            <ion-icon name="basket-outline"></ion-icon>
+            Subtotal ({{ carrito.length }} items)
+          </span>
           <span>{{ formatPrice(subtotal) }}</span>
         </div>
         
@@ -93,7 +96,7 @@
         <hr>
         
         <div class="summary-row total-row">
-          <span><strong>Total a Pagar</strong></span>
+          <span><strong>💰 Total a Pagar</strong></span>
           <span><strong>{{ formatPrice(total) }}</strong></span>
         </div>
       </ion-card-content>
@@ -110,26 +113,100 @@
         Agregar más productos
       </ion-button>
       
-      <!-- Método de pago tradicional -->
-      <ion-button 
-        expand="block" 
-        fill="solid" 
-        (click)="procederAlPago()"
-        class="checkout-btn">
-        <ion-icon name="card-outline" slot="start"></ion-icon>
-        Proceder al pago ({{ formatPrice(total) }})
-      </ion-button>
-      
       <!-- Separador -->
       <div class="payment-separator">
-        <span>o pagar directamente con</span>
+        <hr>
+        <span>💳 Métodos de pago disponibles</span>
+        <hr>
       </div>
       
-      <!-- Contenedor del botón PayPal -->
-      <div id="paypal-button-container" class="paypal-container"></div>
+      <!-- PayPal Section -->
+      <div class="paypal-section">
+        <h3 class="paypal-title">🌟 Pago rápido y seguro con PayPal</h3>
+        
+        <!-- Debug info -->
+        <div class="debug-info">
+          <p><strong>Total:</strong> {{ formatPrice(total) }} = USD ${{ (total / 4000).toFixed(2) }}</p>
+          <p><strong>Items en carrito:</strong> {{ carrito.length }}</p>
+          <p><strong>Estado PayPal:</strong> 
+            <span id="paypal-status" style="font-weight: bold;">{{ paypalMessage }}</span>
+          </p>
+        </div>
+        
+        <!-- PayPal Button Container -->
+        <div 
+          id="paypal-button-container" 
+          class="paypal-container"
+          [class.paypal-ready]="paypalStatus === 'ready'"
+          [class.paypal-error]="paypalStatus === 'error'"
+          style="min-height: 80px; border: 2px solid #007bff; border-radius: 8px; padding: 15px; background: #f8f9ff;">
+          
+          <!-- Loading State -->
+          <div *ngIf="paypalStatus === 'loading'" class="paypal-loading" style="text-align: center; color: #666;">
+            <ion-spinner name="crescent" color="primary"></ion-spinner>
+            <p style="margin-top: 10px;">{{ paypalMessage }}</p>
+          </div>
+          
+          <!-- Error State -->
+          <div *ngIf="paypalStatus === 'error'" class="paypal-error" style="text-align: center; color: #dc3545;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">⚠️</div>
+            <h4>Error con PayPal</h4>
+            <p>{{ paypalMessage }}</p>
+          </div>
+          
+          <!-- Empty State -->
+          <div *ngIf="carrito.length === 0" class="paypal-empty" style="text-align: center; color: #666;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">🛒</div>
+            <p>Agrega productos para ver PayPal</p>
+          </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+          <ion-button 
+            fill="outline" 
+            color="warning"
+            size="small"
+            (click)="testPayPalManual()"
+            [disabled]="carrito.length === 0">
+            🔧 Test PayPal
+          </ion-button>
+          
+          <ion-button 
+            fill="outline" 
+            color="primary"
+            size="small"
+            (click)="reloadPayPal()"
+            [disabled]="carrito.length === 0">
+            🔄 Recargar
+          </ion-button>
+        </div>
+        
+        <!-- Instructions -->
+        <div *ngIf="paypalStatus === 'error'" style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+          <h4 style="color: #856404;">🔧 Solución rápida:</h4>
+          <ol style="color: #856404; font-size: 0.9rem; margin: 0.5rem 0;">
+            <li>Presiona "🔄 Recargar" para reintentar</li>
+            <li>Verifica tu conexión a internet</li>
+            <li>Si persiste, recarga la página completa</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Información adicional -->
+      <div class="payment-info">
+        <ion-card color="light">
+          <ion-card-content>
+            <h3>ℹ️ Información de pago</h3>
+            <ul>
+              <li>💳 PayPal: Pago inmediato y seguro</li>
+              <li>🚚 Domicilio incluido: {{ formatPrice(domicilio) }}</li>
+              <li>⏰ Tiempo de entrega: 30-45 minutos</li>
+              <li>📱 Recibirás confirmación por email</li>
+            </ul>
+          </ion-card-content>
+        </ion-card>
+      </div>
     </div>
   </div>
 </ion-content>
-
-<!-- Tu configuración original de PayPal -->
-<script src="https://www.paypal.com/sdk/js?client-id=AbqotKe77My2Q-CA91Yar4U1ODuwWAUqZ_zpi_GZb0P5M7j5JhGu8u65XlWHC3Iq86C2IvNk0lkrwFoe&currency=USD"></script>

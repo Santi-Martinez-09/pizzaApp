@@ -26,6 +26,8 @@ import {
   IonChip,
   IonFab,
   IonFabButton,
+  IonRefresher,
+  IonRefresherContent,
   ToastController,
   LoadingController
 } from '@ionic/angular/standalone';
@@ -33,7 +35,9 @@ import { addIcons } from 'ionicons';
 import {
   addOutline,
   basketOutline,
-  pizzaOutline
+  pizzaOutline,
+  cafeOutline,
+  refreshOutline
 } from 'ionicons/icons';
 import { PizzaService, Pizza, Bebida, ItemCarrito } from '../services/pizza/pizza.service';
 
@@ -42,7 +46,7 @@ import { PizzaService, Pizza, Bebida, ItemCarrito } from '../services/pizza/pizz
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  providers: [PizzaService],
+  // REMOVIDO: providers: [PizzaService] - esto causaba instancias múltiples
   imports: [
     CommonModule,
     IonicModule,
@@ -68,7 +72,9 @@ import { PizzaService, Pizza, Bebida, ItemCarrito } from '../services/pizza/pizz
     IonLabel,
     IonChip,
     IonFab,
-    IonFabButton
+    IonFabButton,
+    IonRefresher,
+    IonRefresherContent
   ]
 })
 export class HomePage implements OnInit {
@@ -87,7 +93,9 @@ export class HomePage implements OnInit {
     addIcons({
       addOutline,
       basketOutline,
-      pizzaOutline
+      pizzaOutline,
+      cafeOutline,
+      refreshOutline
     });
   }
 
@@ -97,36 +105,40 @@ export class HomePage implements OnInit {
     
     // Suscribirse a cambios del carrito
     this.pizzaService.carrito$.subscribe(carrito => {
-      this.carritoCount = carrito.reduce((total, item) => total + item.cantidad, 0);
-      console.log('HomePage: Carrito actualizado, total items:', this.carritoCount);
+      const nuevoCount = carrito.reduce((total, item) => total + item.cantidad, 0);
+      console.log('HomePage: Carrito actualizado, items:', carrito.length, 'cantidad total:', nuevoCount);
+      this.carritoCount = nuevoCount;
     });
 
-    // Cargar carrito inicial
+    // Obtener carrito inicial
     const carritoInicial = this.pizzaService.getCarrito();
     this.carritoCount = carritoInicial.reduce((total, item) => total + item.cantidad, 0);
     console.log('HomePage: Carrito inicial, total items:', this.carritoCount);
   }
 
   async loadData() {
-    const loading = await this.loadingController.create({
-      message: 'Cargando productos...',
-      spinner: 'crescent'
-    });
-    await loading.present();
-
+    this.isLoading = true;
+    
     try {
       console.log('HomePage: Cargando pizzas y bebidas...');
-      this.pizzas = await this.pizzaService.getPizzas();
-      this.bebidas = await this.pizzaService.getBebidas();
+      
+      // Cargar en paralelo para mejor rendimiento
+      const [pizzasData, bebidasData] = await Promise.all([
+        this.pizzaService.getPizzas(),
+        this.pizzaService.getBebidas()
+      ]);
+      
+      this.pizzas = pizzasData.filter(pizza => pizza.disponible); // Solo pizzas disponibles
+      this.bebidas = bebidasData.filter(bebida => bebida.disponible); // Solo bebidas disponibles
       
       console.log('HomePage: Pizzas cargadas:', this.pizzas.length);
       console.log('HomePage: Bebidas cargadas:', this.bebidas.length);
       
-      await loading.dismiss();
     } catch (error) {
       console.error('Error cargando datos:', error);
-      await loading.dismiss();
       this.presentToast('Error cargando productos', 'danger');
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -152,8 +164,11 @@ export class HomePage implements OnInit {
       return;
     }
 
+    // Crear ID único para el item del carrito
+    const itemId = `pizza-${pizza.id}-${Date.now()}`;
+    
     const itemCarrito: ItemCarrito = {
-      id: `pizza-${pizza.id}-${Date.now()}`,
+      id: itemId,
       tipo: 'pizza',
       item: pizza,
       cantidad: 1,
@@ -164,8 +179,8 @@ export class HomePage implements OnInit {
     
     try {
       this.pizzaService.agregarAlCarrito(itemCarrito);
-      this.presentToast(`${pizza.nombre} agregada al carrito`, 'success');
-      console.log('HomePage: Pizza agregada exitosamente');
+      this.presentToast(`🍕 ${pizza.nombre} agregada al carrito`, 'success');
+      console.log('HomePage: Pizza agregada exitosamente al carrito');
     } catch (error) {
       console.error('Error agregando pizza al carrito:', error);
       this.presentToast('Error agregando al carrito', 'danger');
@@ -186,8 +201,11 @@ export class HomePage implements OnInit {
       return;
     }
 
+    // Crear ID único para el item del carrito
+    const itemId = `bebida-${bebida.id}-${Date.now()}`;
+    
     const itemCarrito: ItemCarrito = {
-      id: `bebida-${bebida.id}-${Date.now()}`,
+      id: itemId,
       tipo: 'bebida',
       item: bebida,
       cantidad: 1,
@@ -198,8 +216,8 @@ export class HomePage implements OnInit {
     
     try {
       this.pizzaService.agregarAlCarrito(itemCarrito);
-      this.presentToast(`${bebida.nombre} agregada al carrito`, 'success');
-      console.log('HomePage: Bebida agregada exitosamente');
+      this.presentToast(`🥤 ${bebida.nombre} agregada al carrito`, 'success');
+      console.log('HomePage: Bebida agregada exitosamente al carrito');
     } catch (error) {
       console.error('Error agregando bebida al carrito:', error);
       this.presentToast('Error agregando al carrito', 'danger');
@@ -207,7 +225,7 @@ export class HomePage implements OnInit {
   }
 
   goToCarrito() {
-    console.log('HomePage: Navegando al carrito');
+    console.log('HomePage: Navegando al carrito con', this.carritoCount, 'items');
     this.router.navigate(['/carrito']);
   }
 
@@ -218,8 +236,14 @@ export class HomePage implements OnInit {
 
   async refreshData(event: any) {
     console.log('HomePage: Refrescando datos...');
-    await this.loadData();
-    event.target.complete();
+    try {
+      await this.loadData();
+      this.presentToast('Productos actualizados', 'success');
+    } catch (error) {
+      this.presentToast('Error actualizando productos', 'danger');
+    } finally {
+      event.target.complete();
+    }
   }
 
   private async presentToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
@@ -227,15 +251,18 @@ export class HomePage implements OnInit {
       message,
       duration: 2000,
       position: 'top',
-      color
+      color,
+      translucent: true
     });
     await toast.present();
   }
 
   // Métodos auxiliares para el template
   getIngredientesText(ingredientes: string[]): string {
+    if (!ingredientes || ingredientes.length === 0) return '';
+    
     return ingredientes.slice(0, 3).join(', ') + 
-           (ingredientes.length > 3 ? `... +${ingredientes.length - 3} más` : '');
+           (ingredientes.length > 3 ? ` +${ingredientes.length - 3} más` : '');
   }
 
   getCategoriaIcon(categoria: string): string {

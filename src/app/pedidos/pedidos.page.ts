@@ -32,7 +32,10 @@ import {
   closeCircleOutline,
   refreshOutline,
   mapOutline,
-  callOutline
+  callOutline,
+  restaurantOutline,
+  carOutline,
+  eyeOutline
 } from 'ionicons/icons';
 import { AuthService } from '../services/auth.service';
 import { PizzaService, Pedido, ItemCarrito } from '../services/pizza/pizza.service';
@@ -42,7 +45,7 @@ import { PizzaService, Pedido, ItemCarrito } from '../services/pizza/pizza.servi
   templateUrl: './pedidos.page.html',
   styleUrls: ['./pedidos.page.scss'],
   standalone: true,
-  providers: [PizzaService, AuthService],
+  // REMOVIDO: providers locales que causaban problemas
   imports: [
     CommonModule,
     IonHeader,
@@ -84,7 +87,10 @@ export class PedidosPage implements OnInit {
       closeCircleOutline,
       refreshOutline,
       mapOutline,
-      callOutline
+      callOutline,
+      restaurantOutline,
+      carOutline,
+      eyeOutline
     });
   }
 
@@ -99,6 +105,7 @@ export class PedidosPage implements OnInit {
       const currentUser = this.authService.getCurrentUser();
       if (currentUser) {
         this.pedidos = await this.pizzaService.getPedidosByUser(currentUser.uid);
+        console.log('Pedidos cargados:', this.pedidos.length);
       }
     } catch (error) {
       console.error('Error cargando pedidos:', error);
@@ -158,7 +165,7 @@ export class PedidosPage implements OnInit {
     const texts: { [key: string]: string } = {
       'pendiente': 'Pendiente',
       'preparando': 'Preparando',
-      'enviado': 'En camino',
+      'enviado': 'En camino',    
       'entregado': 'Entregado',
       'cancelado': 'Cancelado'
     };
@@ -182,8 +189,8 @@ export class PedidosPage implements OnInit {
           <p><strong>Teléfono:</strong> ${pedido.telefono}</p>
           
           <h4>Resumen:</h4>
-          <p><strong>Subtotal:</strong> ${this.formatPrice(pedido.total - 5000)}</p>
-          <p><strong>Domicilio:</strong> ${this.formatPrice(5000)}</p>
+          <p><strong>Subtotal:</strong> ${this.formatPrice(pedido.total - pedido.domicilio)}</p>
+          <p><strong>Domicilio:</strong> ${this.formatPrice(pedido.domicilio)}</p>
           <p><strong>Total:</strong> ${this.formatPrice(pedido.total)}</p>
           <p><strong>Método de pago:</strong> ${this.getPaymentMethodName(pedido.metodoPago)}</p>
           
