@@ -108,7 +108,7 @@ export class AppComponent implements OnInit {
   userProfile: UserProfile | null = null;
   
   // Secciones del menú organizadas
-  menuSections: MenuSection[] = [
+   menuSections: MenuSection[] = [
     {
       title: 'Principal',
       icon: 'home-outline',
@@ -126,9 +126,9 @@ export class AppComponent implements OnInit {
       color: 'secondary',
       adminOnly: true,
       pages: [
-        { title: 'Dashboard', url: '/admin-dashboard', icon: 'analytics', color: 'secondary' },
-        { title: 'Productos', url: '/admin-productos', icon: 'storefront' },
-        { title: 'Pedidos', url: '/admin-pedidos', icon: 'list' },
+        { title: 'Productos', url: '/admin-productos', icon: 'storefront', color: 'secondary' },
+        { title: 'Pedidos', url: '/admin-pedidos', icon: 'list', color: 'warning' },
+        { title: 'Dashboard', url: '/admin-dashboard', icon: 'analytics' },
         { title: 'Usuarios', url: '/admin-usuarios', icon: 'people' },
         { title: 'Estadísticas', url: '/admin-stats', icon: 'stats-chart' }
       ]

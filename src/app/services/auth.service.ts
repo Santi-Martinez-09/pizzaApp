@@ -100,68 +100,6 @@ export class AuthService {
     }
   }
 
-  async register(userData: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }): Promise<{ user: User; profile: UserProfile }> {
-    try {
-      console.log('🔐 Registrando usuario:', userData.email);
-      
-      // Crear usuario en Firebase Auth
-      const result = await createUserWithEmailAndPassword(
-        this.auth, 
-        userData.email, 
-        userData.password
-      );
-      
-      const displayName = `${userData.firstName} ${userData.lastName}`.trim();
-      
-      // Actualizar perfil en Auth
-      await updateProfile(result.user, {
-        displayName: displayName
-      });
-      
-      // Crear perfil completo en Firestore
-      const userProfile: UserProfile = {
-        uid: result.user.uid,
-        email: result.user.email!,
-        role: 'user', // Por defecto todos son usuarios
-        displayName: displayName,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        phone: userData.phone || '',
-        address: '',
-        isActive: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        lastLogin: serverTimestamp(),
-        preferences: {
-          notifications: true,
-          newsletter: true,
-          theme: 'auto'
-        },
-        stats: {
-          totalOrders: 0,
-          totalSpent: 0,
-          favoriteCategory: ''
-        }
-      };
-      
-      await this.createUserProfile(result.user.uid, userProfile);
-      this.userProfileSubject.next(userProfile);
-      
-      console.log('✅ Usuario registrado exitosamente:', displayName);
-      return { user: result.user, profile: userProfile };
-      
-    } catch (error) {
-      console.error('❌ Error en registro:', error);
-      throw error;
-    }
-  }
-
   async loginWithGoogle(): Promise<{ user: User; profile: UserProfile }> {
     try {
       console.log('🔐 Login con Google...');
@@ -352,16 +290,184 @@ export class AuthService {
 
   // ============ MÉTODOS PRIVADOS ============
 
-  private async createUserProfile(uid: string, profile: UserProfile): Promise<void> {
-    try {
-      const userDoc = doc(this.firestore, 'users', uid);
-      await setDoc(userDoc, profile);
-      console.log('✅ Perfil creado en Firestore:', uid);
-    } catch (error) {
-      console.error('❌ Error creando perfil:', error);
-      throw error;
+private async createUserProfile(uid: string, profile: UserProfile): Promise<void> {
+  try {
+    console.log('🔐 Creando perfil en Firestore:', {
+      uid,
+      email: profile.email,
+      role: profile.role, // <- Verificar que este campo existe
+      displayName: profile.displayName
+    });
+
+    const userDoc = doc(this.firestore, 'users', uid);
+    
+    // Verificar que el perfil tiene role antes de guardarlo
+    if (!profile.role) {
+      console.warn('⚠️ ADVERTENCIA: Perfil sin role, asignando "user" por defecto');
+      profile.role = 'user';
     }
+    
+    await setDoc(userDoc, profile);
+    
+    // Verificar que se guardó correctamente
+    const savedDoc = await getDoc(userDoc);
+    if (savedDoc.exists()) {
+      const savedData = savedDoc.data() as UserProfile;
+      console.log('✅ Perfil guardado exitosamente:', {
+        uid: savedData.uid,
+        email: savedData.email,
+        role: savedData.role, // <- Verificar que se guardó
+        displayName: savedData.displayName
+      });
+      
+      if (!savedData.role) {
+        console.error('❌ ERROR: El campo role no se guardó en Firestore!');
+        throw new Error('El campo role no se guardó correctamente');
+      }
+    } else {
+      throw new Error('No se pudo verificar que el documento se creó');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error creando perfil en Firestore:', error);
+    throw error;
   }
+}
+
+// Método para actualizar usuarios existentes sin role
+async updateExistingUsersWithRole(): Promise<void> {
+  try {
+    console.log('🔧 Actualizando usuarios existentes...');
+    
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const userDoc = doc(this.firestore, 'users', currentUser.uid);
+    const userSnap = await getDoc(userDoc);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data() as UserProfile;
+      
+      if (!userData.role) {
+        console.log('🔧 Usuario sin role, actualizando...');
+        
+        await setDoc(userDoc, {
+          ...userData,
+          role: 'user',
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        
+        console.log('✅ Usuario actualizado con role "user"');
+        
+        // Recargar perfil
+        await this.loadUserProfile(currentUser.uid);
+      } else {
+        console.log('✅ Usuario ya tiene role:', userData.role);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error actualizando usuario:', error);
+    throw error;
+  }
+}
+
+// Método mejorado de register con validación extra
+async register(userData: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}): Promise<{ user: User; profile: UserProfile }> {
+  try {
+    console.log('🔐 Registrando usuario:', userData.email);
+    
+    // Crear usuario en Firebase Auth
+    const result = await createUserWithEmailAndPassword(
+      this.auth, 
+      userData.email, 
+      userData.password
+    );
+    
+    const displayName = `${userData.firstName} ${userData.lastName}`.trim();
+    
+    // Actualizar perfil en Auth
+    await updateProfile(result.user, {
+      displayName: displayName
+    });
+    
+    // Crear perfil completo en Firestore con role explícito
+    const userProfile: UserProfile = {
+      uid: result.user.uid,
+      email: result.user.email!,
+      role: 'user', // ← IMPORTANTE: Asegurar que este campo existe
+      displayName: displayName,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      phone: userData.phone || '',
+      address: '',
+      isActive: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastLogin: serverTimestamp(),
+      preferences: {
+        notifications: true,
+        newsletter: true,
+        theme: 'auto'
+      },
+      stats: {
+        totalOrders: 0,
+        totalSpent: 0,
+        favoriteCategory: ''
+      }
+    };
+    
+    // Log del perfil antes de guardarlo
+    console.log('🔐 Perfil a guardar:', {
+      uid: userProfile.uid,
+      email: userProfile.email,
+      role: userProfile.role,
+      displayName: userProfile.displayName
+    });
+    
+    await this.createUserProfile(result.user.uid, userProfile);
+    this.userProfileSubject.next(userProfile);
+    
+    console.log('✅ Usuario registrado exitosamente:', displayName);
+    return { user: result.user, profile: userProfile };
+    
+  } catch (error) {
+    console.error('❌ Error en registro:', error);
+    throw error;
+  }
+}
+
+// Método para hacer admin a un usuario (solo para testing)
+async makeCurrentUserAdmin(): Promise<void> {
+  if (!this.isLoggedIn()) {
+    throw new Error('Usuario no autenticado');
+  }
+  
+  const currentUser = this.getCurrentUser()!;
+  const userDoc = doc(this.firestore, 'users', currentUser.uid);
+  
+  try {
+    await setDoc(userDoc, {
+      role: 'admin',
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    
+    console.log('✅ Usuario promovido a admin');
+    
+    // Recargar perfil
+    await this.loadUserProfile(currentUser.uid);
+  } catch (error) {
+    console.error('❌ Error promoviendo a admin:', error);
+    throw error;
+  }
+}
 
   private async getUserProfileFromFirestore(uid: string): Promise<UserProfile | null> {
     try {

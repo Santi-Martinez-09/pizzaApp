@@ -1,3 +1,5 @@
+// Actualizar src/app/app.routes.ts - Agregar la ruta de admin pedidos
+
 import { Routes } from '@angular/router';
 import { AuthGuard, AdminGuard, PublicGuard } from './services/auth.guard';
 
@@ -40,11 +42,6 @@ export const routes: Routes = [
     loadComponent: () => import('./pago/pago.page').then(m => m.PagoPage),
     canActivate: [AuthGuard]
   },
-  {
-    path: 'pagos',
-    loadComponent: () => import('./pagos/pagos.page').then(m => m.PagosPage),
-    canActivate: [AuthGuard]
-  },
 
   // ============ RUTAS DE ADMINISTRADOR ============
   {
@@ -53,25 +50,26 @@ export const routes: Routes = [
     canActivate: [AdminGuard],
     data: { roles: ['admin'] }
   },
-  // Rutas adicionales de admin (temporalmente redirigen a admin-productos hasta que se implementen)
   {
     path: 'admin-pedidos',
-    redirectTo: '/admin-productos',
-    pathMatch: 'full'
+    loadComponent: () => import('./admin-pedidos/admin-pedidos.page').then(m => m.AdminPedidosPage),
+    canActivate: [AdminGuard],
+    data: { roles: ['admin'] }
   },
+  // Rutas adicionales de admin (temporalmente redirigen hasta que se implementen)
   {
     path: 'admin-usuarios',
-    redirectTo: '/admin-productos',
+    redirectTo: '/admin-pedidos',
     pathMatch: 'full'
   },
   {
     path: 'admin-dashboard',
-    redirectTo: '/admin-productos',
+    redirectTo: '/admin-pedidos',
     pathMatch: 'full'
   },
   {
     path: 'admin-stats',
-    redirectTo: '/admin-productos',
+    redirectTo: '/admin-pedidos',
     pathMatch: 'full'
   },
 
@@ -106,13 +104,6 @@ export const routes: Routes = [
     pathMatch: 'full'
   },
 
-  // ============ RUTAS ESPECIALES ============
-  {
-    path: 'account-disabled',
-    redirectTo: '/login',
-    pathMatch: 'full'
-  },
-
   // ============ REDIRECCIONES ============
   {
     path: '',
@@ -127,7 +118,7 @@ export const routes: Routes = [
   }
 ];
 
-// ============ CONFIGURACIÓN DE NAVEGACIÓN ============
+// ============ CONFIGURACIÓN DE NAVEGACIÓN ACTUALIZADA ============
 
 export interface NavigationConfig {
   userPages: AppPage[];
@@ -175,23 +166,24 @@ export const navigationConfig: NavigationConfig = {
   
   adminPages: [
     {
-      title: 'Dashboard',
-      url: '/admin-dashboard',
-      icon: 'analytics',
-      color: 'secondary',
-      description: 'Panel de control principal'
-    },
-    {
       title: 'Productos',
       url: '/admin-productos',
       icon: 'storefront',
+      color: 'secondary',
       description: 'Gestionar menú y precios'
     },
     {
       title: 'Pedidos',
       url: '/admin-pedidos',
       icon: 'list',
+      color: 'warning',
       description: 'Administrar pedidos de clientes'
+    },
+    {
+      title: 'Dashboard',
+      url: '/admin-dashboard',
+      icon: 'analytics',
+      description: 'Panel de control principal'
     },
     {
       title: 'Usuarios',
@@ -228,54 +220,3 @@ export const navigationConfig: NavigationConfig = {
     }
   ]
 };
-
-// ============ UTILIDADES DE NAVEGACIÓN ============
-
-export class NavigationHelper {
-  
-  /**
-   * Obtiene la ruta de inicio según el rol del usuario
-   */
-  static getHomeRouteByRole(role: 'admin' | 'user'): string {
-    return role === 'admin' ? '/admin-dashboard' : '/home';
-  }
-  
-  /**
-   * Verifica si una ruta requiere permisos de administrador
-   */
-  static isAdminRoute(url: string): boolean {
-    return url.startsWith('/admin-');
-  }
-  
-  /**
-   * Verifica si una ruta es pública (no requiere autenticación)
-   */
-  static isPublicRoute(url: string): boolean {
-    const publicRoutes = ['/login', '/register', '/account-disabled'];
-    return publicRoutes.includes(url);
-  }
-  
-  /**
-   * Obtiene las páginas permitidas según el rol del usuario
-   */
-  static getAllowedPages(role: 'admin' | 'user'): AppPage[] {
-    const userPages = navigationConfig.userPages;
-    const adminPages = role === 'admin' ? navigationConfig.adminPages : [];
-    const supportPages = navigationConfig.supportPages;
-    
-    return [...userPages, ...adminPages, ...supportPages];
-  }
-  
-  /**
-   * Obtiene la información de una página por su URL
-   */
-  static getPageInfo(url: string): AppPage | null {
-    const allPages = [
-      ...navigationConfig.userPages,
-      ...navigationConfig.adminPages,
-      ...navigationConfig.supportPages
-    ];
-    
-    return allPages.find(page => page.url === url) || null;
-  }
-}

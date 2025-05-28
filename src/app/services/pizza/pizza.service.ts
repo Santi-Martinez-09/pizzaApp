@@ -68,6 +68,18 @@ export interface Pedido {
     lng: number;
   };
   paypalTransactionId?: string;
+  datosEntrega?: {
+    nombre: string;
+    telefono: string;
+    direccion: string;
+    detalles: string;
+  };
+  distanciaInfo?: {
+    distancia: string;
+    duracion: string;
+    distanciaMetros: number;
+    duracionMinutos: number;
+  };
 }
 
 @Injectable({

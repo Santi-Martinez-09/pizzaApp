@@ -1,0 +1,313 @@
+<!-- src/app/admin-pedidos/admin-pedidos.page.html -->
+<ion-header [translucent]="true">
+  <ion-toolbar color="secondary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>📦 Gestión de Pedidos</ion-title>
+    <ion-buttons slot="end">
+      <ion-button 
+        fill="clear" 
+        (click)="toggleAutoRefresh()"
+        [color]="autoRefreshEnabled ? 'success' : 'medium'">
+        <ion-icon [name]="autoRefreshEnabled ? 'refresh-outline' : 'refresh-outline'"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" (click)="refreshPedidos()">
+        <ion-icon name="refresh-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  
+  <!-- Refresher -->
+  <ion-refresher slot="fixed" (ionRefresh)="refreshPedidos($event)">
+    <ion-refresher-content
+      pullingIcon="refresh-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando pedidos...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Header con estadísticas -->
+  <div class="admin-header">
+    <div class="welcome-section">
+      <h1>Panel de Pedidos</h1>
+      <p>Gestiona y rastrea todos los pedidos</p>
+    </div>
+    
+    <!-- Estadísticas rápidas -->
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-icon">
+          <ion-icon name="receipt-outline" color="primary"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-number">{{ estadisticas.total }}</span>
+          <span class="stat-label">Total Pedidos</span>
+        </div>
+      </div>
+      
+      <div class="stat-card pending">
+        <div class="stat-icon">
+          <ion-icon name="time-outline" color="warning"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-number">{{ estadisticas.pendientes }}</span>
+          <span class="stat-label">Pendientes</span>
+        </div>
+      </div>
+      
+      <div class="stat-card preparing">
+        <div class="stat-icon">
+          <ion-icon name="restaurant-outline" color="primary"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-number">{{ estadisticas.preparando }}</span>
+          <span class="stat-label">Preparando</span>
+        </div>
+      </div>
+      
+      <div class="stat-card delivered">
+        <div class="stat-icon">
+          <ion-icon name="checkmark-circle-outline" color="success"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-number">{{ estadisticas.entregados }}</span>
+          <span class="stat-label">Entregados</span>
+        </div>
+      </div>
+      
+      <div class="stat-card revenue">
+        <div class="stat-icon">
+          <ion-icon name="cash-outline" color="success"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-number">{{ formatPrice(estadisticas.ingresosDia) }}</span>
+          <span class="stat-label">Ingresos Hoy</span>
+        </div>
+      </div>
+      
+      <div class="stat-card time">
+        <div class="stat-icon">
+          <ion-icon name="time-outline" color="secondary"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-number">{{ estadisticas.tiempoPromedio }}min</span>
+          <span class="stat-label">Tiempo Promedio</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+  <div class="search-section">
+    <ion-searchbar
+      [(ngModel)]="searchTerm"
+      (ionInput)="onSearchChange($event)"
+      placeholder="Buscar por ID, dirección, teléfono..."
+      show-clear-button="focus"
+      debounce="300">
+    </ion-searchbar>
+  </div>
+
+  <!-- Filtros por estado -->
+  <div class="filter-section">
+    <ion-segment [(ngModel)]="selectedSegment" (ionChange)="onSegmentChange($event)" color="secondary">
+      <ion-segment-button value="todos">
+        <ion-label>Todos ({{ estadisticas.total }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="pendiente">
+        <ion-icon name="time-outline"></ion-icon>
+        <ion-label>Pendiente ({{ getContadorPorEstado('pendiente') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="preparando">
+        <ion-icon name="restaurant-outline"></ion-icon>
+        <ion-label>Preparando ({{ getContadorPorEstado('preparando') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="enviado">
+        <ion-icon name="car-outline"></ion-icon>
+        <ion-label>En Camino ({{ getContadorPorEstado('enviado') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="entregado">
+        <ion-icon name="checkmark-circle-outline"></ion-icon>
+        <ion-label>Entregado ({{ getContadorPorEstado('entregado') }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Lista de pedidos -->
+  <div class="pedidos-container">
+    
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="loading-container">
+      <ion-spinner name="crescent" color="secondary"></ion-spinner>
+      <p>Cargando pedidos...</p>
+    </div>
+
+    <!-- Sin pedidos -->
+    <div *ngIf="!isLoading && pedidosFiltrados.length === 0" class="no-pedidos">
+      <ion-icon name="receipt-outline" class="no-pedidos-icon"></ion-icon>
+      <h3>No hay pedidos</h3>
+      <p *ngIf="selectedSegment === 'todos'">Aún no se han realizado pedidos</p>
+      <p *ngIf="selectedSegment !== 'todos'">No hay pedidos con estado "{{ getEstadoText(selectedSegment) }}"</p>
+      <p *ngIf="searchTerm">Intenta con otros términos de búsqueda</p>
+      <ion-button (click)="refreshPedidos()" expand="block" fill="outline">
+        <ion-icon name="refresh-outline" slot="start"></ion-icon>
+        Actualizar
+      </ion-button>
+    </div>
+
+    <!-- Lista de pedidos -->
+    <div *ngIf="!isLoading && pedidosFiltrados.length > 0" class="pedidos-list">
+      <ion-card 
+        *ngFor="let pedido of pedidosFiltrados; trackBy: trackByPedidoId" 
+        class="pedido-card"
+        [class]="'estado-' + pedido.estado">
+        
+        <!-- Header del pedido -->
+        <ion-card-header>
+          <div class="pedido-header">
+            <div class="pedido-info">
+              <ion-card-title>
+                Pedido #{{ (pedido.id?.substring(0, 8) || 'TEMP').toUpperCase() }}
+              </ion-card-title>
+              <ion-note>{{ formatDate(pedido.fechaCreacion) }}</ion-note>
+            </div>
+            
+            <div class="pedido-actions">
+              <ion-badge 
+                [color]="getEstadoBadgeColor(pedido.estado)" 
+                class="estado-badge">
+                <ion-icon [name]="getEstadoIcon(pedido.estado)"></ion-icon>
+                {{ getEstadoText(pedido.estado) }}
+              </ion-badge>
+            </div>
+          </div>
+        </ion-card-header>
+
+        <!-- Contenido del pedido -->
+        <ion-card-content>
+          
+          <!-- Información del cliente -->
+          <div class="cliente-info">
+            <div class="info-row">
+              <ion-icon name="location-outline" color="primary"></ion-icon>
+              <span class="info-text">{{ pedido.direccion }}</span>
+            </div>
+            <div class="info-row">
+              <ion-icon name="call-outline" color="primary"></ion-icon>
+              <span class="info-text">{{ pedido.telefono }}</span>
+            </div>
+            <div class="info-row" *ngIf="pedido.datosEntrega?.nombre">
+              <ion-icon name="person-outline" color="primary"></ion-icon>
+              <span class="info-text">{{ pedido.datosEntrega.nombre }}</span>
+            </div>
+          </div>
+
+          <!-- Items resumidos -->
+          <div class="items-resumen">
+            <h4>Items del pedido:</h4>
+            <div class="items-list">
+              <div *ngFor="let item of pedido.items.slice(0, 3)" class="item-row">
+                <span class="item-name">{{ item.item.nombre }}</span>
+                <span class="item-cantidad">x{{ item.cantidad }}</span>
+                <span class="item-precio">{{ formatPrice(item.precio * item.cantidad) }}</span>
+              </div>
+              <div *ngIf="pedido.items.length > 3" class="more-items">
+                <span>+ {{ pedido.items.length - 3 }} items más</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Información de pago -->
+          <div class="pago-info">
+            <div class="pago-row">
+              <span>Subtotal:</span>
+              <span>{{ formatPrice(pedido.total - pedido.domicilio) }}</span>
+            </div>
+            <div class="pago-row">
+              <span>Domicilio:</span>
+              <span>{{ formatPrice(pedido.domicilio) }}</span>
+            </div>
+            <div class="pago-row total">
+              <span><strong>Total:</strong></span>
+              <span><strong>{{ formatPrice(pedido.total) }}</strong></span>
+            </div>
+            <div class="metodo-pago">
+              <ion-chip color="medium" outline="true">
+                <ion-icon name="card-outline"></ion-icon>
+                <ion-label>{{ getPaymentMethodName(pedido.metodoPago) }}</ion-label>
+              </ion-chip>
+            </div>
+          </div>
+
+          <!-- Tiempo transcurrido -->
+          <div class="tiempo-info" *ngIf="pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'">
+            <ion-chip color="warning" class="tiempo-chip">
+              <ion-icon name="time-outline"></ion-icon>
+              <ion-label>
+                {{ formatDate(pedido.fechaCreacion) }}
+              </ion-label>
+            </ion-chip>
+          </div>
+
+          <!-- Botones de acción -->
+          <div class="action-buttons">
+            <ion-button 
+              fill="outline" 
+              size="small"
+              (click)="verDetallesPedido(pedido)">
+              <ion-icon name="eye-outline" slot="start"></ion-icon>
+              Ver Detalles
+            </ion-button>
+            
+            <ion-button 
+              fill="solid" 
+              size="small"
+              color="secondary"
+              (click)="cambiarEstadoPedido(pedido)"
+              *ngIf="pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'">
+              <ion-icon name="create-outline" slot="start"></ion-icon>
+              Cambiar Estado
+            </ion-button>
+            
+            <!-- Botones de acceso rápido -->
+            <ion-button 
+              fill="solid" 
+              size="small"
+              color="primary"
+              (click)="actualizarEstadoPedido(pedido, 'preparando')"
+              *ngIf="pedido.estado === 'pendiente'">
+              <ion-icon name="restaurant-outline" slot="start"></ion-icon>
+              Preparar
+            </ion-button>
+            
+            <ion-button 
+              fill="solid" 
+              size="small"
+              color="secondary"
+              (click)="actualizarEstadoPedido(pedido, 'enviado')"
+              *ngIf="pedido.estado === 'preparando'">
+              <ion-icon name="car-outline" slot="start"></ion-icon>
+              Enviar
+            </ion-button>
+            
+            <ion-button 
+              fill="solid" 
+              size="small"
+              color="success"
+              (click)="actualizarEstadoPedido(pedido, 'entregado')"
+              *ngIf="pedido.estado === 'enviado'">
+              <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+              Entregar
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+</ion-content>
