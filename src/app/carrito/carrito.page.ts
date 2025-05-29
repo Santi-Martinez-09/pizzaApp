@@ -122,6 +122,16 @@ export class CarritoPage implements OnInit, AfterViewInit {
     setTimeout(() => this.loadPayPalButton(), 500);
   }
 
+  // Método trackBy para optimizar el rendimiento del *ngFor
+  trackByItemId(index: number, item: ItemCarrito): number | string {
+    return item.id || index;
+  }
+
+  // Método trackBy para el carrito adicional
+  trackByAdditionalItemId(index: number, item: any): number | string {
+    return item.id || index;
+  }
+
   loadPayPalButton() {
     // Verificar que PayPal esté disponible y que haya items en el carrito
     const totalItems = this.carrito.length + this.carritoAdicional.length;
